@@ -11,15 +11,14 @@ import (
 	sneaker "github.com/oldfritter/sneaker-go/v3"
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/oldfritter/lucy/base"
 	"github.com/oldfritter/lucy/lib/mq"
 	"github.com/oldfritter/lucy/service/worker/sneakerWorker"
 )
 
 var (
 	closeChan  = make(chan int)
-	allWorkers = []sneaker.WorkerI{
-		sneakerWorker.CaptchaImageWorkerInstance,
-	}
+	allWorkers []sneaker.WorkerI
 )
 
 func main() {
@@ -43,8 +42,25 @@ func main() {
 }
 
 func initialize() {
-	setLog()
 	setPid()
+
+	// 从配置读取 worker 列表
+	configs := base.GetConfig().GetWorkerConfigs()
+
+	// 根据配置构建 worker 实例
+	for _, cfg := range configs {
+		allWorkers = append(allWorkers, sneakerWorker.NewCaptchaImageWorker(cfg))
+	}
+
+	// 没有配置时使用默认 worker（向后兼容）
+	if len(allWorkers) == 0 {
+		allWorkers = []sneaker.WorkerI{sneakerWorker.CaptchaImageWorkerInstance}
+	}
+
+	// 为每个 worker 初始化独立日志
+	for _, w := range allWorkers {
+		w.InitLogger()
+	}
 
 	// 初始化 RabbitMQ 连接
 	mq.InitRabbitMQ()
@@ -56,10 +72,9 @@ func initialize() {
 		return
 	}
 
-	// 设置每个 worker 的 RabbitMQ 连接并初始化日志
+	// 设置每个 worker 的 RabbitMQ 连接
 	for _, w := range allWorkers {
 		w.SetRabbitMqConnect(&sneaker.RabbitMqConnect{Connection: conn})
-		w.InitLogger()
 	}
 }
 
@@ -104,19 +119,6 @@ func startAllWorkers() {
 			}(w)
 		}
 	}
-}
-
-func setLog() {
-	if err := os.Mkdir("logs", 0755); err != nil {
-		if !os.IsExist(err) {
-			log.Fatalf("create folder error: %v", err)
-		}
-	}
-	file, err := os.OpenFile("logs/workers.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalf("open file error: %v", err)
-	}
-	log.SetOutput(file)
 }
 
 func setPid() {

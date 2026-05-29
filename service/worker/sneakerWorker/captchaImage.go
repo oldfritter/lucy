@@ -8,6 +8,7 @@ import (
 
 	sneaker "github.com/oldfritter/sneaker-go/v3"
 
+	"github.com/oldfritter/lucy/base"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/lib/storage/oss"
 )
@@ -30,7 +31,21 @@ var CaptchaImageWorkerInstance = &CaptchaImageWorker{
 	Worker: sneaker.Worker{
 		Name:    "CaptchaImage",
 		Threads: 1,
+		Durable: true,
 	},
+}
+
+// NewCaptchaImageWorker 根据配置创建 CaptchaImageWorker 实例
+func NewCaptchaImageWorker(cfg base.WorkerConfig) *CaptchaImageWorker {
+	return &CaptchaImageWorker{
+		Worker: sneaker.Worker{
+			Name:    cfg.Name,
+			Queue:   cfg.Queue,
+			Log:     cfg.Log,
+			Threads: cfg.Threads,
+			Durable: cfg.Durable,
+		},
+	}
 }
 
 // Work 实现 sneaker.Worker 接口的 Work 方法
