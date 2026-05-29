@@ -15,32 +15,32 @@ func SetV1Interface(e *echo.Echo) {
 	{
 		textimage4Group := captchaGroup.Group("/4textimage")
 		{
-			textimage4Group.GET("/list", v1.GetCaptchaTextimage4List)
-			textimage4Group.GET("/:id", v1.GetCaptchaTextimage4)
-			textimage4Group.POST("", v1.CreateCaptchaTextimage4)
-			textimage4Group.POST("/", v1.CreateCaptchaTextimage4)
-			textimage4Group.PUT("/:id", v1.UpdateCaptchaTextimage4)
-			textimage4Group.DELETE("/:id", v1.DeleteCaptchaTextimage4)
+			textimage4Group.GET("/list", v1.GetCaptchaText4ImageList)
+			textimage4Group.GET("/:id", v1.GetCaptchaText4Image)
+			textimage4Group.POST("", v1.CreateCaptchaText4Image)
+			textimage4Group.POST("/", v1.CreateCaptchaText4Image)
+			textimage4Group.PUT("/:id", v1.UpdateCaptchaText4Image)
+			textimage4Group.DELETE("/:id", v1.DeleteCaptchaText4Image)
 		}
 
 		textimage5Group := captchaGroup.Group("/5textimage")
 		{
-			textimage5Group.GET("/list", v1.GetCaptchaTextimage5List)
-			textimage5Group.GET("/:id", v1.GetCaptchaTextimage5)
-			textimage5Group.POST("", v1.CreateCaptchaTextimage5)
-			textimage5Group.POST("/", v1.CreateCaptchaTextimage5)
-			textimage5Group.PUT("/:id", v1.UpdateCaptchaTextimage5)
-			textimage5Group.DELETE("/:id", v1.DeleteCaptchaTextimage5)
+			textimage5Group.GET("/list", v1.GetCaptchaText5ImageList)
+			textimage5Group.GET("/:id", v1.GetCaptchaText5Image)
+			textimage5Group.POST("", v1.CreateCaptchaText5Image)
+			textimage5Group.POST("/", v1.CreateCaptchaText5Image)
+			textimage5Group.PUT("/:id", v1.UpdateCaptchaText5Image)
+			textimage5Group.DELETE("/:id", v1.DeleteCaptchaText5Image)
 		}
 
 		textimage6Group := captchaGroup.Group("/6textimage")
 		{
-			textimage6Group.GET("/list", v1.GetCaptchaTextimage6List)
-			textimage6Group.GET("/:id", v1.GetCaptchaTextimage6)
-			textimage6Group.POST("", v1.CreateCaptchaTextimage6)
-			textimage6Group.POST("/", v1.CreateCaptchaTextimage6)
-			textimage6Group.PUT("/:id", v1.UpdateCaptchaTextimage6)
-			textimage6Group.DELETE("/:id", v1.DeleteCaptchaTextimage6)
+			textimage6Group.GET("/list", v1.GetCaptchaText6ImageList)
+			textimage6Group.GET("/:id", v1.GetCaptchaText6Image)
+			textimage6Group.POST("", v1.CreateCaptchaText6Image)
+			textimage6Group.POST("/", v1.CreateCaptchaText6Image)
+			textimage6Group.PUT("/:id", v1.UpdateCaptchaText6Image)
+			textimage6Group.DELETE("/:id", v1.DeleteCaptchaText6Image)
 		}
 	}
 

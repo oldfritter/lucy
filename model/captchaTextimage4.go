@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
 	_ "image/jpeg"
 	"log"
@@ -10,11 +11,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/oldfritter/lucy/dom"
+	"github.com/oldfritter/lucy/internal/cache"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/util"
 )
 
-type CaptchaTextimage4 struct {
+type CaptchaText4Image struct {
 	dom.Captcha
 	Prompt1  string `gorm:"size:1"`
 	Prompt2  string `gorm:"size:1"`
@@ -30,13 +32,13 @@ type CaptchaTextimage4 struct {
 	Verify4Y int    `gorm:"size:12"`
 }
 
-func (*CaptchaTextimage4) TableName() string {
-	return "captcha_textimage"
+func (*CaptchaText4Image) TableName() string {
+	return "captcha_text4image"
 }
 
-func (captcha *CaptchaTextimage4) Json() string {
+func (captcha *CaptchaText4Image) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": captcha.Id,
+		"id": fmt.Sprintf("text4-%d", captcha.Id),
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
@@ -55,8 +57,8 @@ func (captcha *CaptchaTextimage4) Json() string {
 	return string(b)
 }
 
-func (captcha *CaptchaTextimage4) GetWithPaginate(db *gorm.DB, r *util.Response) {
-	var results []*CaptchaTextimage4
+func (captcha *CaptchaText4Image) GetWithPaginate(db *gorm.DB, r *util.Response) {
+	var results []*CaptchaText4Image
 	where, values := captcha.WhereBuild(captcha.QueryParams(r.Params))
 	condition := db.Model(captcha).Where(where, values...)
 	condition.Count(&r.Pagination.Count)
@@ -72,7 +74,7 @@ func (captcha *CaptchaTextimage4) GetWithPaginate(db *gorm.DB, r *util.Response)
 	r.Body = results
 }
 
-func (captcha *CaptchaTextimage4) Create() {
+func (captcha *CaptchaText4Image) Create() {
 	var texts []image.Image
 	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt1))
 	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt2))
@@ -85,13 +87,14 @@ func (captcha *CaptchaTextimage4) Create() {
 		captchaImage.AddImage(img, t, 100+30*i, 30, 0)
 	}
 
+	cache.SetCaptchaCache(captcha)
 }
 
-func (captcha *CaptchaTextimage4) Verify(attrs map[string]any) (yes bool) {
+func (captcha *CaptchaText4Image) Verify(attrs map[string]any) (yes bool) {
 	return
 }
 
-func (captcha *CaptchaTextimage4) loadBackground(inputPath string) image.Image {
+func (captcha *CaptchaText4Image) loadBackground(inputPath string) image.Image {
 	reader, err := os.Open(inputPath)
 	if err != nil {
 		log.Fatal(err)

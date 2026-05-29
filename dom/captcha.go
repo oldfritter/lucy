@@ -20,6 +20,14 @@ type Captcha struct {
 	ExpiredAt time.Time
 }
 
+func (c *Captcha) GetCaptcha() string {
+	return c.Captcha
+}
+
+func (c *Captcha) GetExpiredAt() time.Time {
+	return c.ExpiredAt
+}
+
 func (captcha *Captcha) BeforeCreate(db *gorm.DB) (err error) {
 	if captcha.Key == "" {
 		captcha.Key = fmt.Sprintf("captcha/%s/%s.%s", time.Now().Format("2006/01/02"), util.RandStringRunes(32), captcha.Suffix)

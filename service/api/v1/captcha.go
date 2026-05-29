@@ -35,17 +35,17 @@ func VerifyCaptcha(c echo.Context) (err error) {
 
 	switch len(req.Points) {
 	case 4:
-		return verifyTextimage4(c, req)
+		return verifyText4Image(c, req)
 	case 5:
-		return verifyTextimage5(c, req)
+		return verifyText5Image(c, req)
 	case 6:
-		return verifyTextimage6(c, req)
+		return verifyText6Image(c, req)
 	}
 	return util.BuildError("1001")
 }
 
-func verifyTextimage4(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaTextimage4
+func verifyText4Image(c echo.Context, req verifyRequest) error {
+	var captcha model.CaptchaText4Image
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -61,8 +61,8 @@ func verifyTextimage4(c echo.Context, req verifyRequest) error {
 	return c.JSON(http.StatusOK, util.SuccessResponse())
 }
 
-func verifyTextimage5(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaTextimage5
+func verifyText5Image(c echo.Context, req verifyRequest) error {
+	var captcha model.CaptchaText5Image
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -79,8 +79,8 @@ func verifyTextimage5(c echo.Context, req verifyRequest) error {
 	return c.JSON(http.StatusOK, util.SuccessResponse())
 }
 
-func verifyTextimage6(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaTextimage6
+func verifyText6Image(c echo.Context, req verifyRequest) error {
+	var captcha model.CaptchaText6Image
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}

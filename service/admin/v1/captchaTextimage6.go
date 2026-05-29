@@ -10,9 +10,9 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-func GetCaptchaTextimage6List(c echo.Context) (err error) {
+func GetCaptchaText6ImageList(c echo.Context) (err error) {
 	var (
-		captcha model.CaptchaTextimage6
+		captcha model.CaptchaText6Image
 		body    = util.ArrayResponse()
 	)
 	if err := c.Bind(&body.Params); err != nil {
@@ -25,8 +25,8 @@ func GetCaptchaTextimage6List(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, &body)
 }
 
-func GetCaptchaTextimage6(c echo.Context) (err error) {
-	var captcha model.CaptchaTextimage6
+func GetCaptchaText6Image(c echo.Context) (err error) {
+	var captcha model.CaptchaText6Image
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -36,8 +36,8 @@ func GetCaptchaTextimage6(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func CreateCaptchaTextimage6(c echo.Context) (err error) {
-	var captcha model.CaptchaTextimage6
+func CreateCaptchaText6Image(c echo.Context) (err error) {
+	var captcha model.CaptchaText6Image
 	if err = c.Bind(&captcha); err != nil {
 		return util.BuildError("1001")
 	}
@@ -55,8 +55,8 @@ func CreateCaptchaTextimage6(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func UpdateCaptchaTextimage6(c echo.Context) (err error) {
-	var captcha model.CaptchaTextimage6
+func UpdateCaptchaText6Image(c echo.Context) (err error) {
+	var captcha model.CaptchaText6Image
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -73,8 +73,8 @@ func UpdateCaptchaTextimage6(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func DeleteCaptchaTextimage6(c echo.Context) (err error) {
-	var captcha model.CaptchaTextimage6
+func DeleteCaptchaText6Image(c echo.Context) (err error) {
+	var captcha model.CaptchaText6Image
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
