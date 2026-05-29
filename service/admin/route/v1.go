@@ -62,6 +62,29 @@ func SetV1Interface(e *echo.Echo) {
 		userGroup.POST("/", v1.CreateUser)
 		userGroup.PUT("/:id", v1.UpdateUser)
 		userGroup.DELETE("/:id", v1.DeleteUser)
+
+		// 用户下的 ApiKey 列表
+		userGroup.GET("/:userId/apikey/list", v1.GetUserApiKeyList)
+	}
+
+	apikeyGroup := adminGroup.Group("/apikey")
+	{
+		apikeyGroup.GET("/list", v1.GetUserApiKeyList)
+		apikeyGroup.GET("/:id", v1.GetUserApiKey)
+		apikeyGroup.POST("", v1.CreateUserApiKey)
+		apikeyGroup.POST("/", v1.CreateUserApiKey)
+		apikeyGroup.PUT("/:id", v1.UpdateUserApiKey)
+		apikeyGroup.DELETE("/:id", v1.DeleteUserApiKey)
+	}
+
+	campaignGroup := adminGroup.Group("/campaign")
+	{
+		campaignGroup.GET("/list", v1.GetCampaignList)
+		campaignGroup.GET("/:id", v1.GetCampaign)
+		campaignGroup.POST("", v1.CreateCampaign)
+		campaignGroup.POST("/", v1.CreateCampaign)
+		campaignGroup.PUT("/:id", v1.UpdateCampaign)
+		campaignGroup.DELETE("/:id", v1.DeleteCampaign)
 	}
 
 }

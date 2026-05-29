@@ -10,9 +10,9 @@ import (
 type Account struct {
 	dom.Account
 
-	User            *User                 `gorm:"foreignKey:UserId" json:"User,omitempty"`
-	Currency        *Currency             `gorm:"foreignKey:CurrencyId" json:"Currency,omitempty"`
-	AccountVersions []*dom.AccountVersion `gorm:"foreignKey:AccountId" json:"AccountVersions,omitempty"`
+	User            *User                 `gorm:"foreignKey:UserId" json:",omitempty"`
+	Currency        *Currency             `gorm:"foreignKey:CurrencyId" json:",omitempty"`
+	AccountVersions []*dom.AccountVersion `gorm:"foreignKey:AccountId" json:",omitempty"`
 }
 
 func (account *Account) QueryParams(p map[string]string) map[string][]any {

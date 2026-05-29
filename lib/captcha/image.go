@@ -120,6 +120,41 @@ func CreateTextImage(text string) image.Image {
 	return img
 }
 
+// GenerateTextChallenge 将一组字符随机散布在背景图上，返回图片及各字符的中心坐标
+func GenerateTextChallenge(chars []string, backgroundPath string) (image.Image, []image.Point) {
+	bg := LoadBackground(backgroundPath)
+	bounds := bg.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+
+	img := image.NewRGBA(bounds)
+	draw.Draw(img, bounds, bg, bounds.Min, draw.Src)
+
+	var points []image.Point
+	fontSize := 40.0
+
+	for _, ch := range chars {
+		x := 20 + rand.Intn(w-40)
+		y := 50 + rand.Intn(h-60)
+		points = append(points, image.Point{X: x, Y: y})
+
+		fg := image.NewUniform(color.RGBA{
+			uint8(rand.Intn(180)),
+			uint8(rand.Intn(180)),
+			uint8(rand.Intn(180)),
+			255,
+		})
+		drawer := font.Drawer{
+			Dst:  img,
+			Src:  fg,
+			Face: truetype.NewFace(getFont(), &truetype.Options{Size: fontSize}),
+			Dot:  fixed.P(x, y+int(fontSize)),
+		}
+		drawer.DrawString(ch)
+	}
+
+	return img, points
+}
+
 // 叠加图片
 func AddImage(img, addImg image.Image, x, y, offset int) image.Image {
 	bounds := img.Bounds()

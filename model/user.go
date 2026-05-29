@@ -10,7 +10,8 @@ import (
 type User struct {
 	dom.User
 
-	Accounts []*Account `gorm:"foreignKey:UserId" json:"Accounts,omitempty"`
+	Accounts    []*Account    `gorm:"foreignKey:UserId" json:",omitempty"`
+	UserApiKeys []*UserApiKey `gorm:"foreignKey:UserId" json:",omitempty"`
 }
 
 func (user *User) QueryParams(p map[string]string) map[string][]any {
