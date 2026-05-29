@@ -3,10 +3,6 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"image"
-	_ "image/jpeg"
-	"log"
-	"os"
 
 	"gorm.io/gorm"
 
@@ -80,32 +76,13 @@ func (captcha *CaptchaText5Image) GetWithPaginate(db *gorm.DB, r *util.Response)
 }
 
 func (captcha *CaptchaText5Image) Create() {
-	var texts []image.Image
-	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt1))
-	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt2))
-	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt3))
-	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt4))
-	texts = append(texts, captchaImage.CreateTextImage(captcha.Prompt5))
-
-	img := captcha.loadBackground("config/background/c71eda17095e9a92e300ca207f09c778.jpg")
-	captchaImage.AddText(img, "请依次点击以下文字：", 0, 30)
-	for i, t := range texts {
-		captchaImage.AddImage(img, t, 100+30*i, 30, 0)
-	}
-
+	captchaImage.GenerateCaptchaImage(
+		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5},
+		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
+	)
 	cache.SetCaptchaCache(captcha)
 }
 
 func (captcha *CaptchaText5Image) Verify(attrs map[string]any) (yes bool) {
 	return
-}
-
-func (captcha *CaptchaText5Image) loadBackground(inputPath string) image.Image {
-	reader, err := os.Open(inputPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer reader.Close()
-	m, _, err := image.Decode(reader)
-	return m
 }

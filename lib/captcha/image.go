@@ -4,8 +4,11 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	_ "image/jpeg"
+	"log"
 	"math"
 	"math/rand"
+	"os"
 
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
@@ -69,6 +72,32 @@ func AddText(img image.Image, text string, x, y int) image.Image {
 	}
 	drawer.DrawString(text)
 	return newImg
+}
+
+// LoadBackground 加载背景图片
+func LoadBackground(inputPath string) image.Image {
+	reader, err := os.Open(inputPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer reader.Close()
+	m, _, err := image.Decode(reader)
+	return m
+}
+
+// GenerateCaptchaImage 生成验证码图片：背景 + 提示文字 + 逐个叠加文字图片
+func GenerateCaptchaImage(prompts []string, backgroundPath string) image.Image {
+	var texts []image.Image
+	for _, p := range prompts {
+		texts = append(texts, CreateTextImage(p))
+	}
+
+	img := LoadBackground(backgroundPath)
+	AddText(img, "请依次点击以下文字：", 0, 30)
+	for i, t := range texts {
+		AddImage(img, t, 100+30*i, 30, 0)
+	}
+	return img
 }
 
 // 生成文字图片
