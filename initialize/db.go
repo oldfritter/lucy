@@ -17,6 +17,8 @@ func AutoMigrate(db *gorm.DB) {
 		&model.Account{},
 		&dom.AccountVersion{},
 		&model.CaptchaTextimage4{},
+		&model.CaptchaTextimage5{},
+		&model.CaptchaTextimage6{},
 		&model.Currency{},
 		&model.User{},
 	)

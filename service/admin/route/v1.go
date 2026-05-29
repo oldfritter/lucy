@@ -22,6 +22,26 @@ func SetV1Interface(e *echo.Echo) {
 			textimage4Group.PUT("/:id", v1.UpdateCaptchaTextimage4)
 			textimage4Group.DELETE("/:id", v1.DeleteCaptchaTextimage4)
 		}
+
+		textimage5Group := captchaGroup.Group("/5textimage")
+		{
+			textimage5Group.GET("/list", v1.GetCaptchaTextimage5List)
+			textimage5Group.GET("/:id", v1.GetCaptchaTextimage5)
+			textimage5Group.POST("", v1.CreateCaptchaTextimage5)
+			textimage5Group.POST("/", v1.CreateCaptchaTextimage5)
+			textimage5Group.PUT("/:id", v1.UpdateCaptchaTextimage5)
+			textimage5Group.DELETE("/:id", v1.DeleteCaptchaTextimage5)
+		}
+
+		textimage6Group := captchaGroup.Group("/6textimage")
+		{
+			textimage6Group.GET("/list", v1.GetCaptchaTextimage6List)
+			textimage6Group.GET("/:id", v1.GetCaptchaTextimage6)
+			textimage6Group.POST("", v1.CreateCaptchaTextimage6)
+			textimage6Group.POST("/", v1.CreateCaptchaTextimage6)
+			textimage6Group.PUT("/:id", v1.UpdateCaptchaTextimage6)
+			textimage6Group.DELETE("/:id", v1.DeleteCaptchaTextimage6)
+		}
 	}
 
 	userGroup := adminGroup.Group("/user")

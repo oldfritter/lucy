@@ -19,6 +19,7 @@ import (
 	"github.com/oldfritter/lucy/lib/helper"
 	"github.com/oldfritter/lucy/lib/kv"
 	_ "github.com/oldfritter/lucy/lib/storage/oss"
+	"github.com/oldfritter/lucy/service/api/route"
 	"github.com/oldfritter/lucy/util"
 )
 
@@ -45,6 +46,8 @@ func main() {
 	e.Logger.SetOutput(util.GetLogFile())
 	e.DisableHTTP2 = true
 	e.HideBanner = true
+
+	route.SetV1Interface(e)
 
 	var err error
 	go func() {
