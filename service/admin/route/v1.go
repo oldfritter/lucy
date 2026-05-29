@@ -15,32 +15,42 @@ func SetV1Interface(e *echo.Echo) {
 	{
 		textimage4Group := captchaGroup.Group("/4textimage")
 		{
-			textimage4Group.GET("/list", v1.GetCaptchaText4ImageList)
-			textimage4Group.GET("/:id", v1.GetCaptchaText4Image)
-			textimage4Group.POST("", v1.CreateCaptchaText4Image)
-			textimage4Group.POST("/", v1.CreateCaptchaText4Image)
-			textimage4Group.PUT("/:id", v1.UpdateCaptchaText4Image)
-			textimage4Group.DELETE("/:id", v1.DeleteCaptchaText4Image)
+			textimage4Group.GET("/list", v1.GetCaptchaText4List)
+			textimage4Group.GET("/:id", v1.GetCaptchaText4)
+			textimage4Group.POST("", v1.CreateCaptchaText4)
+			textimage4Group.POST("/", v1.CreateCaptchaText4)
+			textimage4Group.PUT("/:id", v1.UpdateCaptchaText4)
+			textimage4Group.DELETE("/:id", v1.DeleteCaptchaText4)
 		}
 
 		textimage5Group := captchaGroup.Group("/5textimage")
 		{
-			textimage5Group.GET("/list", v1.GetCaptchaText5ImageList)
-			textimage5Group.GET("/:id", v1.GetCaptchaText5Image)
-			textimage5Group.POST("", v1.CreateCaptchaText5Image)
-			textimage5Group.POST("/", v1.CreateCaptchaText5Image)
-			textimage5Group.PUT("/:id", v1.UpdateCaptchaText5Image)
-			textimage5Group.DELETE("/:id", v1.DeleteCaptchaText5Image)
+			textimage5Group.GET("/list", v1.GetCaptchaText5List)
+			textimage5Group.GET("/:id", v1.GetCaptchaText5)
+			textimage5Group.POST("", v1.CreateCaptchaText5)
+			textimage5Group.POST("/", v1.CreateCaptchaText5)
+			textimage5Group.PUT("/:id", v1.UpdateCaptchaText5)
+			textimage5Group.DELETE("/:id", v1.DeleteCaptchaText5)
 		}
 
 		textimage6Group := captchaGroup.Group("/6textimage")
 		{
-			textimage6Group.GET("/list", v1.GetCaptchaText6ImageList)
-			textimage6Group.GET("/:id", v1.GetCaptchaText6Image)
-			textimage6Group.POST("", v1.CreateCaptchaText6Image)
-			textimage6Group.POST("/", v1.CreateCaptchaText6Image)
-			textimage6Group.PUT("/:id", v1.UpdateCaptchaText6Image)
-			textimage6Group.DELETE("/:id", v1.DeleteCaptchaText6Image)
+			textimage6Group.GET("/list", v1.GetCaptchaText6List)
+			textimage6Group.GET("/:id", v1.GetCaptchaText6)
+			textimage6Group.POST("", v1.CreateCaptchaText6)
+			textimage6Group.POST("/", v1.CreateCaptchaText6)
+			textimage6Group.PUT("/:id", v1.UpdateCaptchaText6)
+			textimage6Group.DELETE("/:id", v1.DeleteCaptchaText6)
+		}
+
+		rotateGroup := captchaGroup.Group("/rotate")
+		{
+			rotateGroup.GET("/list", v1.GetCaptchaRotateImageList)
+			rotateGroup.GET("/:id", v1.GetCaptchaRotateImage)
+			rotateGroup.POST("", v1.CreateCaptchaRotateImage)
+			rotateGroup.POST("/", v1.CreateCaptchaRotateImage)
+			rotateGroup.PUT("/:id", v1.UpdateCaptchaRotateImage)
+			rotateGroup.DELETE("/:id", v1.DeleteCaptchaRotateImage)
 		}
 	}
 

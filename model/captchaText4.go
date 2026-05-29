@@ -12,13 +12,12 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-type CaptchaText5Image struct {
+type CaptchaText4 struct {
 	dom.Captcha
 	Prompt1  string `gorm:"size:1"`
 	Prompt2  string `gorm:"size:1"`
 	Prompt3  string `gorm:"size:1"`
 	Prompt4  string `gorm:"size:1"`
-	Prompt5  string `gorm:"size:1"`
 	Verify1X int    `gorm:"size:12"`
 	Verify1Y int    `gorm:"size:12"`
 	Verify2X int    `gorm:"size:12"`
@@ -27,23 +26,20 @@ type CaptchaText5Image struct {
 	Verify3Y int    `gorm:"size:12"`
 	Verify4X int    `gorm:"size:12"`
 	Verify4Y int    `gorm:"size:12"`
-	Verify5X int    `gorm:"size:12"`
-	Verify5Y int    `gorm:"size:12"`
 }
 
-func (*CaptchaText5Image) TableName() string {
-	return "captcha_text5image"
+func (*CaptchaText4) TableName() string {
+	return "captcha_text4"
 }
 
-func (captcha *CaptchaText5Image) Json() string {
+func (captcha *CaptchaText4) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text5-%d", captcha.Id),
+		"id": fmt.Sprintf("text4-%d", captcha.Id),
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
 		"p3": captcha.Prompt3,
 		"p4": captcha.Prompt4,
-		"p5": captcha.Prompt5,
 
 		"v1x": captcha.Verify1X,
 		"v1y": captcha.Verify1Y,
@@ -53,17 +49,16 @@ func (captcha *CaptchaText5Image) Json() string {
 		"v3y": captcha.Verify3Y,
 		"v4x": captcha.Verify4X,
 		"v4y": captcha.Verify4Y,
-		"v5x": captcha.Verify5X,
-		"v5y": captcha.Verify5Y,
 	})
 	return string(b)
 }
 
-func (captcha *CaptchaText5Image) GetWithPaginate(db *gorm.DB, r *util.Response) {
-	var results []*CaptchaText5Image
+func (captcha *CaptchaText4) GetWithPaginate(db *gorm.DB, r *util.Response) {
+	var results []*CaptchaText4
 	where, values := captcha.WhereBuild(captcha.QueryParams(r.Params))
 	condition := db.Model(captcha).Where(where, values...)
 	condition.Count(&r.Pagination.Count)
+	// r.Pagination.Count = 1000
 	r.Pagination.Init()
 	if err := condition.
 		Order(captcha.TableName() + "." + r.Pagination.Order).
@@ -75,14 +70,14 @@ func (captcha *CaptchaText5Image) GetWithPaginate(db *gorm.DB, r *util.Response)
 	r.Body = results
 }
 
-func (captcha *CaptchaText5Image) Create() {
+func (captcha *CaptchaText4) Create() {
 	captchaImage.GenerateCaptchaImage(
-		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5},
+		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4},
 		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
 	)
 	cache.SetCaptchaCache(captcha)
 }
 
-func (captcha *CaptchaText5Image) Verify(attrs map[string]any) (yes bool) {
+func (captcha *CaptchaText4) Verify(attrs map[string]any) (yes bool) {
 	return
 }

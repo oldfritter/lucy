@@ -10,5 +10,6 @@ func SetV1Interface(e *echo.Echo) {
 	captchaGroup := e.Group("/api/captcha")
 	{
 		captchaGroup.POST("/verify", v1.VerifyCaptcha)
+		captchaGroup.POST("/verify/rotate", v1.VerifyRotateCaptcha)
 	}
 }

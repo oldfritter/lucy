@@ -45,7 +45,7 @@ func VerifyCaptcha(c echo.Context) (err error) {
 }
 
 func verifyText4Image(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaText4Image
+	var captcha model.CaptchaText4
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -62,7 +62,7 @@ func verifyText4Image(c echo.Context, req verifyRequest) error {
 }
 
 func verifyText5Image(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaText5Image
+	var captcha model.CaptchaText5
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -80,7 +80,7 @@ func verifyText5Image(c echo.Context, req verifyRequest) error {
 }
 
 func verifyText6Image(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaText6Image
+	var captcha model.CaptchaText6
 	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -93,6 +93,32 @@ func verifyText6Image(c echo.Context, req verifyRequest) error {
 		{captcha.Verify6X, captcha.Verify6Y},
 	}
 	if !matchPoints(req.Points, expected) {
+		return util.BuildError("1008")
+	}
+	return c.JSON(http.StatusOK, util.SuccessResponse())
+}
+
+// rotateVerifyRequest 旋转验证码验证请求
+type rotateVerifyRequest struct {
+	Captcha string  `json:"captcha"`
+	Angle   float64 `json:"angle"`
+}
+
+// VerifyRotateCaptcha 验证旋转验证码
+func VerifyRotateCaptcha(c echo.Context) (err error) {
+	var req rotateVerifyRequest
+	if err = c.Bind(&req); err != nil {
+		return util.BuildError("1001")
+	}
+	if req.Captcha == "" {
+		return util.BuildError("1001")
+	}
+
+	var captcha model.CaptchaRotateImage
+	if err = db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
+		return util.BuildError("1003")
+	}
+	if !captcha.Verify(map[string]any{"angle": req.Angle}) {
 		return util.BuildError("1008")
 	}
 	return c.JSON(http.StatusOK, util.SuccessResponse())

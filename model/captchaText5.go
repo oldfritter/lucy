@@ -12,14 +12,13 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-type CaptchaText6Image struct {
+type CaptchaText5 struct {
 	dom.Captcha
 	Prompt1  string `gorm:"size:1"`
 	Prompt2  string `gorm:"size:1"`
 	Prompt3  string `gorm:"size:1"`
 	Prompt4  string `gorm:"size:1"`
 	Prompt5  string `gorm:"size:1"`
-	Prompt6  string `gorm:"size:1"`
 	Verify1X int    `gorm:"size:12"`
 	Verify1Y int    `gorm:"size:12"`
 	Verify2X int    `gorm:"size:12"`
@@ -30,24 +29,21 @@ type CaptchaText6Image struct {
 	Verify4Y int    `gorm:"size:12"`
 	Verify5X int    `gorm:"size:12"`
 	Verify5Y int    `gorm:"size:12"`
-	Verify6X int    `gorm:"size:12"`
-	Verify6Y int    `gorm:"size:12"`
 }
 
-func (*CaptchaText6Image) TableName() string {
-	return "captcha_text6image"
+func (*CaptchaText5) TableName() string {
+	return "captcha_text5"
 }
 
-func (captcha *CaptchaText6Image) Json() string {
+func (captcha *CaptchaText5) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text6-%d", captcha.Id),
+		"id": fmt.Sprintf("text5-%d", captcha.Id),
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
 		"p3": captcha.Prompt3,
 		"p4": captcha.Prompt4,
 		"p5": captcha.Prompt5,
-		"p6": captcha.Prompt6,
 
 		"v1x": captcha.Verify1X,
 		"v1y": captcha.Verify1Y,
@@ -59,14 +55,12 @@ func (captcha *CaptchaText6Image) Json() string {
 		"v4y": captcha.Verify4Y,
 		"v5x": captcha.Verify5X,
 		"v5y": captcha.Verify5Y,
-		"v6x": captcha.Verify6X,
-		"v6y": captcha.Verify6Y,
 	})
 	return string(b)
 }
 
-func (captcha *CaptchaText6Image) GetWithPaginate(db *gorm.DB, r *util.Response) {
-	var results []*CaptchaText6Image
+func (captcha *CaptchaText5) GetWithPaginate(db *gorm.DB, r *util.Response) {
+	var results []*CaptchaText5
 	where, values := captcha.WhereBuild(captcha.QueryParams(r.Params))
 	condition := db.Model(captcha).Where(where, values...)
 	condition.Count(&r.Pagination.Count)
@@ -81,14 +75,14 @@ func (captcha *CaptchaText6Image) GetWithPaginate(db *gorm.DB, r *util.Response)
 	r.Body = results
 }
 
-func (captcha *CaptchaText6Image) Create() {
+func (captcha *CaptchaText5) Create() {
 	captchaImage.GenerateCaptchaImage(
-		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5, captcha.Prompt6},
+		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5},
 		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
 	)
 	cache.SetCaptchaCache(captcha)
 }
 
-func (captcha *CaptchaText6Image) Verify(attrs map[string]any) (yes bool) {
+func (captcha *CaptchaText5) Verify(attrs map[string]any) (yes bool) {
 	return
 }

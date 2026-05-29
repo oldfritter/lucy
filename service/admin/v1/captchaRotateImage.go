@@ -10,9 +10,9 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-func GetCaptchaText4List(c echo.Context) (err error) {
+func GetCaptchaRotateImageList(c echo.Context) (err error) {
 	var (
-		captcha model.CaptchaText4
+		captcha model.CaptchaRotateImage
 		body    = util.ArrayResponse()
 	)
 	if err := c.Bind(&body.Params); err != nil {
@@ -25,8 +25,8 @@ func GetCaptchaText4List(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, &body)
 }
 
-func GetCaptchaText4(c echo.Context) (err error) {
-	var captcha model.CaptchaText4
+func GetCaptchaRotateImage(c echo.Context) (err error) {
+	var captcha model.CaptchaRotateImage
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -36,8 +36,8 @@ func GetCaptchaText4(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func CreateCaptchaText4(c echo.Context) (err error) {
-	var captcha model.CaptchaText4
+func CreateCaptchaRotateImage(c echo.Context) (err error) {
+	var captcha model.CaptchaRotateImage
 	if err = c.Bind(&captcha); err != nil {
 		return util.BuildError("1001")
 	}
@@ -55,8 +55,8 @@ func CreateCaptchaText4(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func UpdateCaptchaText4(c echo.Context) (err error) {
-	var captcha model.CaptchaText4
+func UpdateCaptchaRotateImage(c echo.Context) (err error) {
+	var captcha model.CaptchaRotateImage
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -73,8 +73,8 @@ func UpdateCaptchaText4(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func DeleteCaptchaText4(c echo.Context) (err error) {
-	var captcha model.CaptchaText4
+func DeleteCaptchaRotateImage(c echo.Context) (err error) {
+	var captcha model.CaptchaRotateImage
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
