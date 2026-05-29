@@ -1,0 +1,10 @@
+"en-US":
+  code:
+    "1000": Success
+    "1001": The parameter is wrong
+    "1002": Attribute check failed
+    "1003": No Data
+    "1004": Need username or email
+    "1005": Not logged in
+    "1006": Incorrect account or password
+    "1007": Existed
