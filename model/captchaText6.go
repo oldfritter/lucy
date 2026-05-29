@@ -40,7 +40,7 @@ func (*CaptchaText6) TableName() string {
 
 func (captcha *CaptchaText6) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text6-%d", captcha.Id),
+		"id": fmt.Sprintf("text-6-%d", captcha.Id),
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
@@ -90,5 +90,17 @@ func (captcha *CaptchaText6) Create() {
 }
 
 func (captcha *CaptchaText6) Verify(attrs map[string]any) (yes bool) {
-	return
+	points, ok := attrs["points"].([][]int)
+	if !ok || len(points) != 6 {
+		return false
+	}
+	expected := [][]int{
+		{captcha.Verify1X, captcha.Verify1Y},
+		{captcha.Verify2X, captcha.Verify2Y},
+		{captcha.Verify3X, captcha.Verify3Y},
+		{captcha.Verify4X, captcha.Verify4Y},
+		{captcha.Verify5X, captcha.Verify5Y},
+		{captcha.Verify6X, captcha.Verify6Y},
+	}
+	return matchTextPoints(points, expected)
 }

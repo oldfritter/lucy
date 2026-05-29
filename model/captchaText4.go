@@ -34,7 +34,7 @@ func (*CaptchaText4) TableName() string {
 
 func (captcha *CaptchaText4) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text4-%d", captcha.Id),
+		"id": fmt.Sprintf("text-4-%d", captcha.Id),
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
@@ -79,5 +79,27 @@ func (captcha *CaptchaText4) Create() {
 }
 
 func (captcha *CaptchaText4) Verify(attrs map[string]any) (yes bool) {
-	return
+	points, ok := attrs["points"].([][]int)
+	if !ok || len(points) != 4 {
+		return false
+	}
+	expected := [][]int{
+		{captcha.Verify1X, captcha.Verify1Y},
+		{captcha.Verify2X, captcha.Verify2Y},
+		{captcha.Verify3X, captcha.Verify3Y},
+		{captcha.Verify4X, captcha.Verify4Y},
+	}
+	return matchTextPoints(points, expected)
+}
+
+// matchTextPoints 坐标匹配：所有点与期望点的欧几里得距离均 ≤ 30px
+func matchTextPoints(input, expected [][]int) bool {
+	for i, p := range input {
+		dx := float64(p[0] - expected[i][0])
+		dy := float64(p[1] - expected[i][1])
+		if dx*dx+dy*dy > 900 { // 30²
+			return false
+		}
+	}
+	return true
 }
