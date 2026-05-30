@@ -383,7 +383,7 @@ func (sc *scheduleCaptcha) GetCaptcha() string { return sc.cc.GetCaptcha() }
 func (sc *scheduleCaptcha) Json() string       { return sc.data }
 
 func createRotateCaptcha(campaign *model.Campaign) error {
-	c := model.CaptchaRotateImage{
+	c := model.CaptchaImageRotate{
 		Indicator: "▲",
 		Tolerance: 15,
 	}
@@ -416,7 +416,7 @@ func countCaptchasByCampaign(campaignId int) int64 {
 		&model.CaptchaText4{},
 		&model.CaptchaText5{},
 		&model.CaptchaText6{},
-		&model.CaptchaRotateImage{},
+		&model.CaptchaImageRotate{},
 	}
 	for _, t := range tables {
 		var n int64

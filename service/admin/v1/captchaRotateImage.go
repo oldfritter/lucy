@@ -10,9 +10,9 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-func GetCaptchaRotateImageList(c echo.Context) (err error) {
+func GetCaptchaImageRotateList(c echo.Context) (err error) {
 	var (
-		captcha model.CaptchaRotateImage
+		captcha model.CaptchaImageRotate
 		body    = util.ArrayResponse()
 	)
 	if err := c.Bind(&body.Params); err != nil {
@@ -25,8 +25,8 @@ func GetCaptchaRotateImageList(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, &body)
 }
 
-func GetCaptchaRotateImage(c echo.Context) (err error) {
-	var captcha model.CaptchaRotateImage
+func GetCaptchaImageRotate(c echo.Context) (err error) {
+	var captcha model.CaptchaImageRotate
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -36,8 +36,8 @@ func GetCaptchaRotateImage(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func CreateCaptchaRotateImage(c echo.Context) (err error) {
-	var captcha model.CaptchaRotateImage
+func CreateCaptchaImageRotate(c echo.Context) (err error) {
+	var captcha model.CaptchaImageRotate
 	if err = c.Bind(&captcha); err != nil {
 		return util.BuildError("1001")
 	}
@@ -55,8 +55,8 @@ func CreateCaptchaRotateImage(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func UpdateCaptchaRotateImage(c echo.Context) (err error) {
-	var captcha model.CaptchaRotateImage
+func UpdateCaptchaImageRotate(c echo.Context) (err error) {
+	var captcha model.CaptchaImageRotate
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
@@ -73,8 +73,8 @@ func UpdateCaptchaRotateImage(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-func DeleteCaptchaRotateImage(c echo.Context) (err error) {
-	var captcha model.CaptchaRotateImage
+func DeleteCaptchaImageRotate(c echo.Context) (err error) {
+	var captcha model.CaptchaImageRotate
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		First(&captcha).Error; err != nil {
 		return util.BuildError("1003")

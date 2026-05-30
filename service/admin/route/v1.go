@@ -45,12 +45,12 @@ func SetV1Interface(e *echo.Echo) {
 
 		rotateGroup := captchaGroup.Group("/rotate")
 		{
-			rotateGroup.GET("/list", v1.GetCaptchaRotateImageList)
-			rotateGroup.GET("/:id", v1.GetCaptchaRotateImage)
-			rotateGroup.POST("", v1.CreateCaptchaRotateImage)
-			rotateGroup.POST("/", v1.CreateCaptchaRotateImage)
-			rotateGroup.PUT("/:id", v1.UpdateCaptchaRotateImage)
-			rotateGroup.DELETE("/:id", v1.DeleteCaptchaRotateImage)
+			rotateGroup.GET("/list", v1.GetCaptchaImageRotateList)
+			rotateGroup.GET("/:id", v1.GetCaptchaImageRotate)
+			rotateGroup.POST("", v1.CreateCaptchaImageRotate)
+			rotateGroup.POST("/", v1.CreateCaptchaImageRotate)
+			rotateGroup.PUT("/:id", v1.UpdateCaptchaImageRotate)
+			rotateGroup.DELETE("/:id", v1.DeleteCaptchaImageRotate)
 		}
 	}
 

@@ -35,7 +35,7 @@ type CaptchaText6 struct {
 }
 
 func (*CaptchaText6) TableName() string {
-	return "captcha_text6"
+	return "captcha_text_6"
 }
 
 func (captcha *CaptchaText6) GetCaptcha() string {

@@ -193,7 +193,7 @@ func GenerateTextChallenge(chars []string) (image.Image, []image.Point) {
 		drawer.DrawString(ch)
 
 		// 旋转单字图片
-		rotated := RotateImage(charImg, angleDeg)
+		rotated := ImageRotate(charImg, angleDeg)
 		rb := rotated.Bounds()
 
 		// 将旋转后的字形合成到主画布（中心对齐到 x, y）

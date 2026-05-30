@@ -32,7 +32,7 @@ type CaptchaText5 struct {
 }
 
 func (*CaptchaText5) TableName() string {
-	return "captcha_text5"
+	return "captcha_text_5"
 }
 
 func (captcha *CaptchaText5) GetCaptcha() string {

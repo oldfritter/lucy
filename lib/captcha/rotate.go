@@ -7,8 +7,8 @@ import (
 	"math/rand"
 )
 
-// RotateImage 将图片按指定角度旋转（逆时针为正），双线性插值，返回旋转后图像
-func RotateImage(src image.Image, angle float64) image.Image {
+// ImageRotate 将图片按指定角度旋转（逆时针为正），双线性插值，返回旋转后图像
+func ImageRotate(src image.Image, angle float64) image.Image {
 	bounds := src.Bounds()
 	rad := angle * math.Pi / 180.0
 
@@ -94,6 +94,6 @@ func GenerateRotateCaptcha(indicator string) (image.Image, float64) {
 
 	angle := 120 + rand.Float64()*180
 
-	rotated := RotateImage(canvas, angle)
+	rotated := ImageRotate(canvas, angle)
 	return rotated, angle
 }

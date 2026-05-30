@@ -13,23 +13,23 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-// CaptchaRotateImage 旋转验证码
-type CaptchaRotateImage struct {
+// CaptchaImageRotate 旋转验证码
+type CaptchaImageRotate struct {
 	dom.Captcha
 	Indicator string  `gorm:"size:64"`    // 方向指示文字，如 "▲"
 	Angle     float64 `gorm:"type:float"` // 随机旋转角度
 	Tolerance float64 `gorm:"default:15"` // 验证容差角度，默认 15°
 }
 
-func (*CaptchaRotateImage) TableName() string {
-	return "captcha_rotate_image"
+func (*CaptchaImageRotate) TableName() string {
+	return "captcha_image_rotate"
 }
 
-func (captcha *CaptchaRotateImage) GetCaptcha() string {
+func (captcha *CaptchaImageRotate) GetCaptcha() string {
 	return fmt.Sprintf("image:rotate:%s", captcha.Uid)
 }
 
-func (captcha *CaptchaRotateImage) Json() string {
+func (captcha *CaptchaImageRotate) Json() string {
 	b, _ := json.Marshal(map[string]any{
 		"id":    fmt.Sprintf("image:rotate:%s", captcha.Uid),
 		"key":   captcha.Key,
@@ -38,8 +38,8 @@ func (captcha *CaptchaRotateImage) Json() string {
 	return string(b)
 }
 
-func (captcha *CaptchaRotateImage) GetWithPaginate(db *gorm.DB, r *util.Response) {
-	var results []*CaptchaRotateImage
+func (captcha *CaptchaImageRotate) GetWithPaginate(db *gorm.DB, r *util.Response) {
+	var results []*CaptchaImageRotate
 	where, values := captcha.WhereBuild(captcha.QueryParams(r.Params))
 	condition := db.Model(captcha).Where(where, values...)
 	condition.Count(&r.Pagination.Count)
@@ -55,7 +55,7 @@ func (captcha *CaptchaRotateImage) GetWithPaginate(db *gorm.DB, r *util.Response
 }
 
 // Create 生成旋转验证码图片并写入缓存
-func (captcha *CaptchaRotateImage) Create() {
+func (captcha *CaptchaImageRotate) Create() {
 	if captcha.Indicator == "" {
 		captcha.Indicator = "▲"
 	}
@@ -68,7 +68,7 @@ func (captcha *CaptchaRotateImage) Create() {
 }
 
 // Verify 验证用户提交的旋转角度
-func (captcha *CaptchaRotateImage) Verify(attrs map[string]any) (yes bool) {
+func (captcha *CaptchaImageRotate) Verify(attrs map[string]any) (yes bool) {
 	angle, ok := attrs["angle"].(float64)
 	if !ok {
 		return false

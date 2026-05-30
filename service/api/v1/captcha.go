@@ -111,7 +111,7 @@ func verifyTextImage(c echo.Context, req verifyRequest) error {
 }
 
 func verifyRotate(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaRotateImage
+	var captcha model.CaptchaImageRotate
 	if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
