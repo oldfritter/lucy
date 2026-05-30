@@ -61,15 +61,22 @@ func GetMyApiKey(c echo.Context) (err error) {
 // CreateMyApiKey 当前用户创建自己的 ApiKey（Key、Secret 由系统自动生成）
 func CreateMyApiKey(c echo.Context) (err error) {
 	claims, _ := base.GetClaim(c)
+
+	// 限制单个用户最多创建 5 个 API Key
+	var count int64
+	if db.MysqlDB.Model(&model.UserApiKey{}).Where("user_id = ?", claims.UserId).Count(&count); count >= 5 {
+		return util.BuildError("1009")
+	}
+
 	var uak model.UserApiKey
 	if err = c.Bind(&uak); err != nil {
 		return util.BuildError("1001")
 	}
 	uak.UserId = claims.UserId
 	uak.GenerateKeys()
-	if err = c.Validate(&uak); err != nil {
-		return util.BuildError("1002")
-	}
+	// if err = c.Validate(&uak); err != nil {
+	//   return util.BuildError("1002")
+	// }
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&uak).Error != nil {

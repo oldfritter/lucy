@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -58,6 +59,12 @@ func Register(c echo.Context) (err error) {
 	if err = c.Bind(&req); err != nil {
 		return util.BuildError("1001")
 	}
+
+	// Gender 统一转小写（必须在 Validate 之前）
+	if req.Gender != "" {
+		req.Gender = strings.ToLower(req.Gender)
+	}
+
 	if err = c.Validate(&req); err != nil {
 		return util.BuildError("1002", err.Error())
 	}
