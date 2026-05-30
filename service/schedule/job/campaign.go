@@ -86,7 +86,7 @@ func init() {
 // fillCampaignCaptchas 扫描未足额的投放并补充生成验证码
 func fillCampaignCaptchas() {
 	var campaigns []model.Campaign
-	if err := db.MysqlDB.Where("status IN (0, 1)").Find(&campaigns).Error; err != nil {
+	if err := db.MysqlDB.Where("status IN (1)").Find(&campaigns).Error; err != nil {
 		log.Printf("[fill-campaign] query campaigns failed: %v", err)
 		return
 	}
