@@ -8,18 +8,43 @@ import (
 )
 
 func SetV1Interface(e *echo.Echo) {
-	captchaGroup := e.Group("/api/captcha")
+	v1Group := e.Group("/api/v1")
+
+	captchaGroup := v1Group.Group("/captcha")
 	{
 		captchaGroup.POST("/verify", v1.VerifyCaptcha)
 	}
 
-	apikeyGroup := e.Group("/api/apikey", middleware.Auth())
+	userGroup := v1Group.Group("/user")
 	{
-		apikeyGroup.GET("/list", v1.GetMyApiKeyList)
-		apikeyGroup.GET("/:id", v1.GetMyApiKey)
-		apikeyGroup.POST("", v1.CreateMyApiKey)
-		apikeyGroup.POST("/", v1.CreateMyApiKey)
-		apikeyGroup.PUT("/:id", v1.UpdateMyApiKey)
-		apikeyGroup.DELETE("/:id", v1.DeleteMyApiKey)
+		userGroup.POST("/register", v1.Register)
+		userGroup.POST("/login", v1.Login)
+	}
+
+	authGroup := v1Group.Group("", middleware.Auth())
+	{
+		userGroup := authGroup.Group("/user")
+		{
+			userGroup.GET("/profile", v1.GetMyProfile)
+			userGroup.PUT("/profile", v1.UpdateMyProfile)
+		}
+
+		apikeyGroup := authGroup.Group("/apikey")
+		{
+			apikeyGroup.GET("/list", v1.GetMyApiKeyList)
+			apikeyGroup.GET("/:id", v1.GetMyApiKey)
+			apikeyGroup.POST("", v1.CreateMyApiKey)
+			apikeyGroup.POST("/", v1.CreateMyApiKey)
+			apikeyGroup.PUT("/:id", v1.UpdateMyApiKey)
+			apikeyGroup.DELETE("/:id", v1.DeleteMyApiKey)
+		}
+
+		imageGroup := authGroup.Group("/image")
+		{
+			imageGroup.POST("/upload", v1.UploadImage)
+			imageGroup.GET("/list", v1.GetMyImageList)
+			imageGroup.GET("/:id", v1.GetMyImage)
+			imageGroup.DELETE("/:id", v1.DeleteMyImage)
+		}
 	}
 }
