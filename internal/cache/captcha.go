@@ -1,8 +1,6 @@
 package cache
 
 import (
-	"time"
-
 	"github.com/gomodule/redigo/redis"
 
 	"github.com/oldfritter/lucy/base"
@@ -10,29 +8,22 @@ import (
 )
 
 const (
-	cacheKeyPrefix    = "lucy:captcha:"
-	cacheExtraMinutes = 5 // 比验证码过期时间多存 5 分钟
+	cacheKeyPrefix = "lucy:captcha:"
 )
 
 // CaptchaCacher 验证码缓存接口
 type CaptchaCacher interface {
 	GetCaptcha() string
-	GetExpiredAt() time.Time
 	Json() string
 }
 
-// SetCaptchaCache 将验证码序列化后存入 Redis，TTL = 过期时间 + 5 分钟
+// SetCaptchaCache 将验证码序列化后存入 Redis（持久存储，消费时删除）
 func SetCaptchaCache(c CaptchaCacher) error {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
 
-	ttl := time.Until(c.GetExpiredAt()) + cacheExtraMinutes*time.Minute
-	if ttl <= 0 {
-		ttl = cacheExtraMinutes * time.Minute
-	}
-
 	key := cacheKeyPrefix + c.GetCaptcha()
-	_, err := conn.Do("SETEX", key, int64(ttl.Seconds()), c.Json())
+	_, err := conn.Do("SET", key, c.Json())
 	return err
 }
 

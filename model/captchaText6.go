@@ -38,9 +38,14 @@ func (*CaptchaText6) TableName() string {
 	return "captcha_text6"
 }
 
+func (captcha *CaptchaText6) GetCaptcha() string {
+	return fmt.Sprintf("text:6:%s", captcha.Uid)
+}
+
 func (captcha *CaptchaText6) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text-6-%d", captcha.Id),
+		"id":  fmt.Sprintf("text:6:%s", captcha.Uid),
+		"key": captcha.Key,
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
@@ -84,7 +89,6 @@ func (captcha *CaptchaText6) GetWithPaginate(db *gorm.DB, r *util.Response) {
 func (captcha *CaptchaText6) Create() {
 	captchaImage.GenerateCaptchaImage(
 		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5, captcha.Prompt6},
-		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
 	)
 	cache.SetCaptchaCache(captcha)
 }

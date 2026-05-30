@@ -16,18 +16,22 @@ import (
 // CaptchaRotateImage 旋转验证码
 type CaptchaRotateImage struct {
 	dom.Captcha
-	Indicator string  `gorm:"size:64"`       // 方向指示文字，如 "▲"
-	Angle     float64 `gorm:"type:float"`    // 随机旋转角度
-	Tolerance float64 `gorm:"default:15"`    // 验证容差角度，默认 15°
+	Indicator string  `gorm:"size:64"`    // 方向指示文字，如 "▲"
+	Angle     float64 `gorm:"type:float"` // 随机旋转角度
+	Tolerance float64 `gorm:"default:15"` // 验证容差角度，默认 15°
 }
 
 func (*CaptchaRotateImage) TableName() string {
 	return "captcha_rotate_image"
 }
 
+func (captcha *CaptchaRotateImage) GetCaptcha() string {
+	return fmt.Sprintf("image:rotate:%s", captcha.Uid)
+}
+
 func (captcha *CaptchaRotateImage) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id":    fmt.Sprintf("rotate-%d", captcha.Id),
+		"id":    fmt.Sprintf("image:rotate:%s", captcha.Uid),
 		"key":   captcha.Key,
 		"angle": captcha.Angle,
 	})
@@ -59,10 +63,7 @@ func (captcha *CaptchaRotateImage) Create() {
 		captcha.Tolerance = 15
 	}
 
-	_, captcha.Angle = captchaImage.GenerateRotateCaptcha(
-		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
-		captcha.Indicator,
-	)
+	_, captcha.Angle = captchaImage.GenerateRotateCaptcha(captcha.Indicator)
 	cache.SetCaptchaCache(captcha)
 }
 

@@ -32,9 +32,14 @@ func (*CaptchaText4) TableName() string {
 	return "captcha_text4"
 }
 
+func (captcha *CaptchaText4) GetCaptcha() string {
+	return fmt.Sprintf("text:4:%s", captcha.Uid)
+}
+
 func (captcha *CaptchaText4) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id": fmt.Sprintf("text-4-%d", captcha.Id),
+		"id":  fmt.Sprintf("text:4:%s", captcha.Uid),
+		"key": captcha.Key,
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
@@ -58,7 +63,6 @@ func (captcha *CaptchaText4) GetWithPaginate(db *gorm.DB, r *util.Response) {
 	where, values := captcha.WhereBuild(captcha.QueryParams(r.Params))
 	condition := db.Model(captcha).Where(where, values...)
 	condition.Count(&r.Pagination.Count)
-	// r.Pagination.Count = 1000
 	r.Pagination.Init()
 	if err := condition.
 		Order(captcha.TableName() + "." + r.Pagination.Order).
@@ -73,7 +77,6 @@ func (captcha *CaptchaText4) GetWithPaginate(db *gorm.DB, r *util.Response) {
 func (captcha *CaptchaText4) Create() {
 	captchaImage.GenerateCaptchaImage(
 		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4},
-		"config/background/c71eda17095e9a92e300ca207f09c778.jpg",
 	)
 	cache.SetCaptchaCache(captcha)
 }

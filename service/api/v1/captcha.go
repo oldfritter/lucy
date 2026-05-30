@@ -3,12 +3,14 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/lib/db"
+	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/model"
 	"github.com/oldfritter/lucy/util"
 )
@@ -79,40 +81,44 @@ func verifyTextImage(c echo.Context, req verifyRequest) error {
 	switch len(req.Points) {
 	case 4:
 		var captcha model.CaptchaText4
-		if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
+		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			return util.BuildError("1008")
 		}
+		cleanupCaptcha(captcha.Key, req.Captcha)
 	case 5:
 		var captcha model.CaptchaText5
-		if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
+		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			return util.BuildError("1008")
 		}
+		cleanupCaptcha(captcha.Key, req.Captcha)
 	case 6:
 		var captcha model.CaptchaText6
-		if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
+		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			return util.BuildError("1008")
 		}
+		cleanupCaptcha(captcha.Key, req.Captcha)
 	}
 	return c.JSON(http.StatusOK, util.SuccessResponse())
 }
 
 func verifyRotate(c echo.Context, req verifyRequest) error {
 	var captcha model.CaptchaRotateImage
-	if err := db.MysqlDB.Where("captcha = ?", req.Captcha).First(&captcha).Error; err != nil {
+	if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
 		return util.BuildError("1003")
 	}
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		return util.BuildError("1008")
 	}
+	cleanupCaptcha(captcha.Key, req.Captcha)
 	return c.JSON(http.StatusOK, util.SuccessResponse())
 }
 
@@ -122,4 +128,20 @@ func pointsToInts(input []verifyPoint) [][]int {
 		points[i] = []int{p.X, p.Y}
 	}
 	return points
+}
+
+// cleanupCaptcha 验证码消费后清理 OSS 图片和 Redis 缓存
+func cleanupCaptcha(ossKey, captchaId string) {
+	_ = oss.DeleteObject(ossKey)
+	_ = cache.DelCaptchaCache(captchaId)
+}
+
+// parseCaptchaID 从 "text-4-123" / "rotate-456" 中提取末尾数字 ID
+func parseCaptchaID(captcha string) int {
+	idx := strings.LastIndex(captcha, "-")
+	if idx < 0 {
+		return 0
+	}
+	id, _ := strconv.Atoi(captcha[idx+1:])
+	return id
 }

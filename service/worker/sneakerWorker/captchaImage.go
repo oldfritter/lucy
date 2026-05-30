@@ -3,13 +3,7 @@ package sneakerWorker
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"image"
-	_ "image/jpeg"
 	"image/png"
-	"io"
-	"net/http"
-	"os"
 	"time"
 
 	sneaker "github.com/oldfritter/sneaker-go/v3"
@@ -19,13 +13,11 @@ import (
 	"github.com/oldfritter/lucy/lib/storage/oss"
 )
 
-const defaultBackground = "config/background/c71eda17095e9a92e300ca207f09c778.jpg"
-
 // CaptchaPayload 验证码图片生成任务载荷
 type CaptchaPayload struct {
 	Prompts       []string `json:"prompts"`
 	Key           string   `json:"key"`
-	BackgroundURL string   `json:"backgroundUrl,omitempty"` // 可选：投放的自定义背景图 URL
+	BackgroundURL string   `json:"backgroundUrl,omitempty"` // 保留字段，暂不使用
 }
 
 // CaptchaImageWorker 验证码图片生成 Worker
@@ -67,8 +59,7 @@ func (w *CaptchaImageWorker) Work(payloadJson *[]byte) (err error) {
 
 	w.LogInfo("start processing, prompts: ", payload.Prompts, ", key: ", payload.Key)
 
-	bg := resolveBackground(payload.BackgroundURL)
-	img := captchaImage.GenerateCaptchaImage(payload.Prompts, bg)
+	img := captchaImage.GenerateCaptchaImage(payload.Prompts)
 
 	var buf bytes.Buffer
 	if err = png.Encode(&buf, img); err != nil {
@@ -84,43 +75,4 @@ func (w *CaptchaImageWorker) Work(payloadJson *[]byte) (err error) {
 
 	w.LogInfo("completed, key: ", payload.Key, ", time:", (time.Now().UnixNano()-start)/1000000, " ms")
 	return
-}
-
-// resolveBackground 优先使用远程背景，失败则回退默认
-func resolveBackground(url string) string {
-	if url == "" {
-		return defaultBackground
-	}
-	resp, err := http.Get(url)
-	if err != nil {
-		return defaultBackground
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return defaultBackground
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return defaultBackground
-	}
-	// 验证是否为有效图片
-	if _, _, err := image.Decode(bytes.NewReader(data)); err != nil {
-		return defaultBackground
-	}
-	// 写入临时文件（纳秒时间戳防并发冲突）
-	tmpPath := fmt.Sprintf("config/background/campaign_%d.jpg", time.Now().UnixNano())
-	if err := writeFile(tmpPath, data); err != nil {
-		return defaultBackground
-	}
-	return tmpPath
-}
-
-func writeFile(path string, data []byte) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.Write(data)
-	return err
 }

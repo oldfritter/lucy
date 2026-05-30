@@ -2,20 +2,16 @@ package job
 
 import (
 	"bytes"
-	"encoding/json"
 	"image"
 	"image/png"
 	"log"
 	"math"
 	"math/rand"
 	"strings"
-	"time"
 
-	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/lib/db"
-	"github.com/oldfritter/lucy/lib/mq"
 	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/model"
 )
@@ -49,17 +45,40 @@ var systemWordBank = []string{
 	"自食其力", "自告奋勇", "精卫填海", "愚公移山", "女娲补天", "开天辟地",
 	"夸父追日", "后羿射日", "嫦娥奔月", "牛郎织女", "八仙过海", "叶落归根",
 	"根深蒂固", "瓜熟蒂落", "落花流水", "流连忘返", "返璞归真", "真理名言",
+
+	// 五字短语（text5 专用，字不重复）
+	"今晚打老虎", "明天去游泳", "明天会更好", "春风吹又生",
+	"更上一层楼", "床前明月光", "低头思故乡", "锄禾日当午",
+	"春眠不觉晓", "花落知多少", "家和万事兴", "民以食为天",
+	"日久见人心", "家书抵万金", "名师出高徒", "功到自然成",
+	"学而时习之", "温故而知新", "四海皆兄弟", "相识满天下",
+	"礼轻情意重", "人穷志不短", "天涯若比邻", "海内存知己",
+	"少壮不努力", "老大徒伤悲", "欲速则不达", "鲤鱼跳龙门",
+	"岁月不待人", "读书破万卷", "下笔如有神", "路遥知马力",
+	"疾风知劲草", "烈火见真金", "岁寒知松柏", "时穷节乃见",
+	"人生如朝露", "光阴似箭飞", "日月如穿梭", "白驹过隙间",
+	"一日难再晨", "盛年不重来",
+
+	// 六字短语（text6 专用，字不重复）
+	"有志者事竟成", "天有不测风云", "人有旦夕祸福", "远水不救近火",
+	"真金不怕火炼", "英雄所见略同", "二者不可得兼", "万变不离其宗",
+	"三人行有我师", "比上不足下余", "杀鸡焉用牛刀", "车到山前有路",
+	"风马牛不相及", "春风又绿江南", "海阔凭鱼跃天", "莫愁前路无知",
+	"挂羊头卖狗肉", "近朱者赤墨黑", "海水不可斗量", "满招损谦受益",
+	"牛头不对马嘴", "不可同日而语", "秋水共长天色", "百思不得其解",
+	"三寸不烂之舌", "耳闻不如目见", "百闻不如一见", "闻名不如见面",
+	"船到桥头自然", "落霞与孤鹜飞", "有过之无不及", "顾左右而言他",
+	"过五关斩六将", "迅雷不及掩耳", "事实胜于雄辩",
 }
 
 const (
-	defaultBackground = "config/background/c71eda17095e9a92e300ca207f09c778.jpg"
-	batchPerRun       = 20 // 每轮每个投放最多生成 20 个验证码
+	batchPerRun = 20 // 每轮每个投放最多生成 20 个验证码
 )
 
 func init() {
 	Register(Job{
 		Name: "fill-campaign",
-		Spec: "@every 5m",
+		Spec: "@every 1m",
 		Func: fillCampaignCaptchas,
 	})
 }
@@ -80,8 +99,7 @@ func fillCampaignCaptchas() {
 
 	for _, campaign := range campaigns {
 		// 统计已生成数量
-		var count int64
-		db.MysqlDB.Model(&dom.Captcha{}).Where("campaign_id = ?", campaign.Id).Count(&count)
+		count := countCaptchasByCampaign(campaign.Id)
 
 		needed := campaign.CaptchaCount - int(count)
 		if needed <= 0 {
@@ -115,7 +133,7 @@ func fillCampaignCaptchas() {
 		log.Printf("[fill-campaign] campaign=%d created=%d", campaign.Id, created)
 
 		// 重新统计
-		db.MysqlDB.Model(&dom.Captcha{}).Where("campaign_id = ?", campaign.Id).Count(&count)
+		count = countCaptchasByCampaign(campaign.Id)
 		if int(count) >= campaign.CaptchaCount {
 			markCompleted(&campaign)
 		}
@@ -148,7 +166,8 @@ func generateOne(campaign *model.Campaign) error {
 
 // pickPrompts 从词库中随机选取一个与验证码类型匹配的词组，按顺序返回各字
 // 词库格式：好好学习，天天向上，叶公好龙，武松打虎（text4）
-//          不到长城非好汉，春蚕到死丝方尽（text7）
+//
+//	不到长城非好汉，春蚕到死丝方尽（text7）
 func pickPrompts(campaign *model.Campaign) []string {
 	if campaign.WordBank == "" {
 		return nil
@@ -188,12 +207,14 @@ func pickSysPrompts(captchaType string) []string {
 		}
 	}
 	if len(matched) == 0 {
-		// 无匹配长度（如 text5/text6 无对应成语），取任意成语
+		// 无匹配长度（如 text5/text6 无对应成语），取任意成语并截断
 		matched = systemWordBank
-		n = 4
 	}
 
-	word := matched[rand.Intn(len(matched))]
+	word := []rune(matched[rand.Intn(len(matched))])
+	if len(word) > n {
+		word = word[:n]
+	}
 	result := make([]string, n)
 	for i, r := range word {
 		result[i] = string(r)
@@ -234,10 +255,12 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 			sys = sys[1:]
 		}
 	}
-	prompts = prompts[:count]
+	if len(prompts) > count {
+		prompts = prompts[:count]
+	}
 
 	// 生成挑战图 + 获取各字位点
-	img, points := captchaImage.GenerateTextChallenge(prompts, defaultBackground)
+	img, points := captchaImage.GenerateTextChallenge(prompts)
 
 	// 先创建 DB 记录触发 BeforeCreate（生成 Key、Captcha）
 	var c model.CaptchaText4
@@ -259,8 +282,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
-		bgURL := pickBackground(campaign)
-		publishCaptchaPayload(cc.Captcha, prompts, cc.Key, bgURL)
 		return nil
 	case 6:
 		cc := model.CaptchaText6{
@@ -279,8 +300,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
-		bgURL := pickBackground(campaign)
-		publishCaptchaPayload(cc.Captcha, prompts, cc.Key, bgURL)
 		return nil
 	default:
 		c = model.CaptchaText4{
@@ -302,8 +321,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 	tx.Save(&c)
 	tx.DbCommit()
 
-	bgURL := pickBackground(campaign)
-	publishCaptchaPayload(c.Captcha, prompts, c.Key, bgURL)
 	return nil
 }
 
@@ -362,9 +379,8 @@ type scheduleCaptcha struct {
 	data string
 }
 
-func (sc *scheduleCaptcha) GetCaptcha() string      { return sc.cc.GetCaptcha() }
-func (sc *scheduleCaptcha) GetExpiredAt() time.Time  { return time.Now().Add(5 * time.Minute) }
-func (sc *scheduleCaptcha) Json() string             { return sc.data }
+func (sc *scheduleCaptcha) GetCaptcha() string { return sc.cc.GetCaptcha() }
+func (sc *scheduleCaptcha) Json() string       { return sc.data }
 
 func createRotateCaptcha(campaign *model.Campaign) error {
 	c := model.CaptchaRotateImage{
@@ -386,35 +402,26 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	c.Create()
 	tx.DbCommit()
 
-	bgURL := pickBackground(campaign)
-	publishCaptchaPayload(c.Captcha, nil, c.Key, bgURL)
 	return nil
-}
-
-// publishCaptchaPayload 发送图片生成任务到 RabbitMQ
-func publishCaptchaPayload(captchaID string, prompts []string, key string, bgURL string) {
-	payload, _ := json.Marshal(map[string]any{
-		"prompts":       prompts,
-		"key":           key,
-		"backgroundUrl": bgURL,
-	})
-	if err := mq.PublishMessage("lucy:captcha:image", payload); err != nil {
-		log.Printf("[fill-campaign] publish mq failed for %s: %v", captchaID, err)
-	}
-}
-
-// pickBackground 从投放的背景图中随机取一张 URL，没有则返回空
-func pickBackground(campaign *model.Campaign) string {
-	if campaign.BackgroundImages == "" {
-		return ""
-	}
-	var urls []string
-	if err := json.Unmarshal([]byte(campaign.BackgroundImages), &urls); err != nil || len(urls) == 0 {
-		return ""
-	}
-	return urls[rand.Intn(len(urls))]
 }
 
 func randInt(min, max int) int {
 	return min + rand.Intn(max-min+1)
+}
+
+// countCaptchasByCampaign 跨四张验证码表统计指定投放已生成的验证码总数
+func countCaptchasByCampaign(campaignId int) int64 {
+	var total int64
+	tables := []any{
+		&model.CaptchaText4{},
+		&model.CaptchaText5{},
+		&model.CaptchaText6{},
+		&model.CaptchaRotateImage{},
+	}
+	for _, t := range tables {
+		var n int64
+		db.MysqlDB.Model(t).Where("campaign_id = ?", campaignId).Count(&n)
+		total += n
+	}
+	return total
 }

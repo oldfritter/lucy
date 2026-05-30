@@ -46,5 +46,15 @@ func SetV1Interface(e *echo.Echo) {
 			imageGroup.GET("/:id", v1.GetMyImage)
 			imageGroup.DELETE("/:id", v1.DeleteMyImage)
 		}
+
+		campaignGroup := authGroup.Group("/campaign")
+		{
+			campaignGroup.GET("/list", v1.GetMyCampaignList)
+			campaignGroup.GET("/:id", v1.GetMyCampaign)
+			campaignGroup.POST("", v1.CreateMyCampaign)
+			campaignGroup.POST("/", v1.CreateMyCampaign)
+			campaignGroup.PUT("/:id", v1.UpdateMyCampaign)
+			campaignGroup.DELETE("/:id", v1.DeleteMyCampaign)
+		}
 	}
 }

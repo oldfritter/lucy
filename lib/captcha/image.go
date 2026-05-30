@@ -4,11 +4,8 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	_ "image/jpeg"
-	"log"
 	"math"
 	"math/rand"
-	"os"
 
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
@@ -27,26 +24,19 @@ func getFont() *truetype.Font {
 func Whirl(img image.Image, angle, scale float64) image.Image {
 	bounds := img.Bounds()
 	dst := image.NewRGBA(bounds)
-	// 计算旋转中心点
 	centerX := float64(bounds.Dx() / 2)
 	centerY := float64(bounds.Dy() / 2)
 	for i := 0; i < bounds.Dx(); i++ {
 		for j := 0; j < bounds.Dy(); j++ {
-			// 计算当前像素点到中心点的距离
 			dx := float64(i) - centerX
 			dy := float64(j) - centerY
-			// 根据旋转角度计算变形后的像素点坐标
 			radius := math.Sqrt(dx*dx + dy*dy)
 			theta := math.Atan2(dy, dx)
 			newRadius := radius * scale
 			newX := int(centerX + newRadius*math.Cos(theta+angle))
 			newY := int(centerY + newRadius*math.Sin(theta+angle))
-			// 如果新的像素点坐标在图像范围内，则进行变形处理
 			if newX >= 0 && newX < bounds.Dx() && newY >= 0 && newY < bounds.Dy() {
-				// 获取原图像素点颜色
-				color := img.At(newX, newY)
-				// 绘制新图像
-				dst.Set(i, j, color)
+				dst.Set(i, j, img.At(newX, newY))
 			}
 		}
 	}
@@ -68,34 +58,27 @@ func AddText(img image.Image, text string, x, y int) image.Image {
 		Dst:  newImg,
 		Src:  fg,
 		Face: truetype.NewFace(getFont(), &truetype.Options{Size: 30}),
-		Dot:  fixed.P(x, y), // 文字起始位置
+		Dot:  fixed.P(x, y),
 	}
 	drawer.DrawString(text)
 	return newImg
 }
 
-// LoadBackground 加载背景图片
-func LoadBackground(inputPath string) image.Image {
-	reader, err := os.Open(inputPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer reader.Close()
-	m, _, err := image.Decode(reader)
-	return m
-}
-
-// GenerateCaptchaImage 生成验证码图片：背景 + 提示文字 + 逐个叠加文字图片
-func GenerateCaptchaImage(prompts []string, backgroundPath string) image.Image {
+// GenerateCaptchaImage 生成验证码图片（透明背景，动态尺寸）
+func GenerateCaptchaImage(prompts []string) image.Image {
 	var texts []image.Image
 	for _, p := range prompts {
 		texts = append(texts, CreateTextImage(p))
 	}
 
-	img := LoadBackground(backgroundPath)
-	AddText(img, "请依次点击以下文字：", 0, 30)
+	n := len(prompts)
+	w := 40 + n*80
+	h := 120
+
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	AddText(img, "请依次点击以下文字：", 10, 30)
 	for i, t := range texts {
-		AddImage(img, t, 100+30*i, 30, 0)
+		AddImage(img, t, 100+30*i, 30, 10)
 	}
 	return img
 }
@@ -114,29 +97,87 @@ func CreateTextImage(text string) image.Image {
 		Dst:  img,
 		Src:  fg,
 		Face: truetype.NewFace(getFont(), &truetype.Options{Size: 30}),
-		Dot:  fixed.P(0, 25), // 文字起始位置
+		Dot:  fixed.P(0, 25),
 	}
 	drawer.DrawString(text)
 	return img
 }
 
-// GenerateTextChallenge 将一组字符随机散布在背景图上，返回图片及各字符的中心坐标
-func GenerateTextChallenge(chars []string, backgroundPath string) (image.Image, []image.Point) {
-	bg := LoadBackground(backgroundPath)
-	bounds := bg.Bounds()
-	w, h := bounds.Dx(), bounds.Dy()
+// charRect 表示一个已放置字符的边界矩形（含间距）
+type charRect struct {
+	MinX, MinY, MaxX, MaxY int
+}
 
-	img := image.NewRGBA(bounds)
-	draw.Draw(img, bounds, bg, bounds.Min, draw.Src)
+// overlaps 检查两个矩形是否重叠
+func (r charRect) overlaps(other charRect) bool {
+	return r.MinX < other.MaxX && r.MaxX > other.MinX &&
+		r.MinY < other.MaxY && r.MaxY > other.MinY
+}
+
+// GenerateTextChallenge 将一组字符随机散布（含随机旋转 ±60°）在透明背景上，返回图片及各字符的中心坐标
+func GenerateTextChallenge(chars []string) (image.Image, []image.Point) {
+	fontSize := 30.0
+	fontSizeInt := int(fontSize)
+	padding := 20
+
+	// 布局间距独立于渲染字号，保持画布紧凑
+	layoutSize := 20
+	expansion := layoutSize*2 + 10
+
+	n := len(chars)
+	w := padding*2 + n*expansion*3
+	h := padding*2 + expansion*4
+
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+
+	xMax := w - padding - expansion
+	yMin := padding + expansion
+	yMax := h - padding - expansion
 
 	var points []image.Point
-	fontSize := 40.0
+	var placed []charRect
+	const maxRetries = 50
+
+	// 单字临时画布尺寸（按实际渲染字号，足够容纳旋转后的字形）
+	charSz := fontSizeInt * 3
 
 	for _, ch := range chars {
-		x := 20 + rand.Intn(w-40)
-		y := 50 + rand.Intn(h-60)
-		points = append(points, image.Point{X: x, Y: y})
+		var x, y int
+		var angleDeg float64
+		for retry := 0; retry < maxRetries; retry++ {
+			x = padding + rand.Intn(xMax-padding)
+			y = yMin + rand.Intn(yMax-yMin)
+			angleDeg = rand.Float64()*120 - 60 // [-60, 60]
 
+			candidate := charRect{
+				MinX: x - expansion,
+				MaxX: x + expansion,
+				MinY: y - expansion,
+				MaxY: y + expansion,
+			}
+
+			overlap := false
+			for _, p := range placed {
+				if candidate.overlaps(p) {
+					overlap = true
+					break
+				}
+			}
+			if !overlap {
+				break
+			}
+		}
+
+		points = append(points, image.Point{X: x, Y: y})
+		placed = append(placed, charRect{
+			MinX: x - expansion,
+			MaxX: x + expansion,
+			MinY: y - expansion,
+			MaxY: y + expansion,
+		})
+
+		// 创建单字图片（透明背景），居中绘制
+		charImg := image.NewRGBA(image.Rect(0, 0, charSz, charSz))
 		fg := image.NewUniform(color.RGBA{
 			uint8(rand.Intn(180)),
 			uint8(rand.Intn(180)),
@@ -144,12 +185,25 @@ func GenerateTextChallenge(chars []string, backgroundPath string) (image.Image, 
 			255,
 		})
 		drawer := font.Drawer{
-			Dst:  img,
+			Dst:  charImg,
 			Src:  fg,
 			Face: truetype.NewFace(getFont(), &truetype.Options{Size: fontSize}),
-			Dot:  fixed.P(x, y+int(fontSize)),
+			Dot:  fixed.P(charSz/2-fontSizeInt/3, charSz/2+fontSizeInt/3),
 		}
 		drawer.DrawString(ch)
+
+		// 旋转单字图片
+		rotated := RotateImage(charImg, angleDeg)
+		rb := rotated.Bounds()
+
+		// 将旋转后的字形合成到主画布（中心对齐到 x, y）
+		compositePoint := image.Pt(x-rb.Dx()/2, y-rb.Dy()/2)
+		draw.Draw(img,
+			image.Rect(compositePoint.X, compositePoint.Y, compositePoint.X+rb.Dx(), compositePoint.Y+rb.Dy()),
+			rotated,
+			rb.Min,
+			draw.Over,
+		)
 	}
 
 	return img, points

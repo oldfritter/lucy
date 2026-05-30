@@ -15,6 +15,7 @@ require (
 	github.com/oldfritter/validator/v10 v10.28.0
 	github.com/qor/i18n v0.0.0-20240731022134-5432feee3ad2
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.45.0
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
 	gorm.io/driver/mysql v1.6.0
@@ -54,7 +55,6 @@ require (
 	github.com/qor/session v0.0.0-20170907035918-8206b0adab70 // indirect
 	github.com/qor/validations v0.0.0-20171228122639-f364bca61b46 // indirect
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/theplant/cldr v0.0.0-20190423050709-9f76f7ce4ee8 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

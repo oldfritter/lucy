@@ -15,26 +15,20 @@ type Captcha struct {
 	UserApiKeyId *int   `gorm:"index"`                                           // 消费此验证码的 ApiKey ID（可为空）
 	CampaignId   *int   `gorm:"index"`                                           // 投放此验证码的 Campaign ID（可为空）
 	Status       int    `gorm:"size:8;default:1" query:"Status"`                 // 状态
-	Captcha      string `gorm:"size:32;uniqueIndex:idx1" query:"Captcha"`        // 唯一识别号
-	Key          string `gorm:"size:64" query:"Key"`                             // 存储图片的key
+	Uid          string `gorm:"size:32;uniqueIndex" query:"Uid"`                 // 唯一识别名
+	Key          string `gorm:"size:64" query:"Key"`                             // 存储图片的 OSS 路径
 	Suffix       string `gorm:"size:8;default:png" form:"Suffix" query:"Suffix"` // 后缀
-	ExpiredAt    time.Time
-}
-
-func (c *Captcha) GetCaptcha() string {
-	return c.Captcha
-}
-
-func (c *Captcha) GetExpiredAt() time.Time {
-	return c.ExpiredAt
 }
 
 func (c *Captcha) BeforeCreate(db *gorm.DB) (err error) {
+	if c.Suffix == "" {
+		c.Suffix = "png"
+	}
+	if c.Uid == "" {
+		c.Uid = util.RandStringRunes(16)
+	}
 	if c.Key == "" {
 		c.Key = fmt.Sprintf("captcha/%s/%s.%s", time.Now().Format("2006/01/02"), util.RandStringRunes(32), c.Suffix)
-	}
-	if c.Captcha == "" {
-		c.Captcha = util.RandStringRunes(32)
 	}
 	return
 }
@@ -46,9 +40,6 @@ func (*Captcha) QueryParams(p map[string]string) map[string][]any {
 	}
 	if p["Suffix"] != "" {
 		params["suffix"] = []any{"suffix", p["Suffix"]}
-	}
-	if p["Captcha"] != "" {
-		params["captcha_id"] = []any{"=", p["Captcha"]}
 	}
 	if p["Status"] != "" {
 		params["status"] = []any{"=", p["Status"]}
