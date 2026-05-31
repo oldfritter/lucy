@@ -49,7 +49,3 @@ func PoolSize(captchaType string) (int, error) {
 	defer conn.Close()
 	return redis.Int(conn.Do("SCARD", poolKey(captchaType)))
 }
-
-func BuildPoolKey(captchaType string) string {
-	return base.RedisNamespace + ":captcha:pool:" + captchaType
-}
