@@ -28,6 +28,9 @@ func (c *Captcha) BeforeCreate(db *gorm.DB) (err error) {
 	if c.Uid == "" {
 		c.Uid = util.RandStringRunes(16)
 	}
+	if c.ValidCode == "" {
+		c.ValidCode = util.RandStringRunes(32)
+	}
 	if c.Key == "" {
 		c.Key = fmt.Sprintf("captcha/%s/%s.%s", time.Now().Format("2006/01/02"), util.RandStringRunes(32), c.Suffix)
 	}
