@@ -185,10 +185,17 @@ func FetchCaptcha(c echo.Context) (err error) {
 		return util.BuildError("1003")
 	}
 
+	// 生成带签名的临时下载链接
+	imageUrl, err := oss.GetObjectURL(capData.Key, 300)
+	if err != nil {
+		pool.AddToPool(apiKey.CaptchaType, uid)
+		return util.BuildError("1003")
+	}
+
 	respBody := map[string]string{
 		"uid":        capData.Uid,
 		"valid_code": capData.ValidCode,
-		"key":        oss.OssAsset() + "/" + capData.Key,
+		"url":        imageUrl,
 	}
 
 	response := util.SuccessResponse()

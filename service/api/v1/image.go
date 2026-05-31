@@ -86,7 +86,7 @@ func UploadImage(c echo.Context) (err error) {
 
 	tx.DbCommit()
 
-	img.Url, _ = oss.GetObjectURL(img.Path)
+	img.Url, _ = oss.GetObjectURL(img.Path, 3600)
 	response := util.SuccessResponse()
 	response.Body = img
 	return c.JSON(http.StatusOK, response)
@@ -120,7 +120,7 @@ func GetMyImageList(c echo.Context) (err error) {
 		return util.BuildError("1000")
 	}
 	for i := range results {
-		results[i].Url, _ = oss.GetObjectURL(results[i].Path)
+		results[i].Url, _ = oss.GetObjectURL(results[i].Path, 3600)
 	}
 	body.Body = results
 	return c.JSON(http.StatusOK, &body)
@@ -134,7 +134,7 @@ func GetMyImage(c echo.Context) (err error) {
 		First(&img).Error; err != nil {
 		return util.BuildError("1003")
 	}
-	img.Url, _ = oss.GetObjectURL(img.Path)
+	img.Url, _ = oss.GetObjectURL(img.Path, 3600)
 	response := util.SuccessResponse()
 	response.Body = img
 	return c.JSON(http.StatusOK, response)

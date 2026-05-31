@@ -78,11 +78,11 @@ func DeleteObject(key string) error {
 	return bucket.DeleteObject(key)
 }
 
-// GetObjectURL 生成带签名的临时下载链接，默认有效期 1 小时
-func GetObjectURL(key string) (string, error) {
+// GetObjectURL 生成带签名的临时下载链接，expireSec 为有效期（秒）
+func GetObjectURL(key string, expireSec int64) (string, error) {
 	bucket, err := OssClient.Bucket(OssAssetsBucket())
 	if err != nil {
 		return "", err
 	}
-	return bucket.SignURL(key, oss.HTTPGet, 3600)
+	return bucket.SignURL(key, oss.HTTPGet, expireSec)
 }
