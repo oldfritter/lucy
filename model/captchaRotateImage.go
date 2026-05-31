@@ -10,6 +10,7 @@ import (
 	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
+	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/util"
 )
 
@@ -27,6 +28,19 @@ func (*CaptchaImageRotate) TableName() string {
 
 func (captcha *CaptchaImageRotate) GetCaptcha() string {
 	return fmt.Sprintf("image:rotate:%s", captcha.Uid)
+}
+
+func (captcha *CaptchaImageRotate) AfterCreate(tx *gorm.DB) error {
+	return cache.SetCaptchaCache(captcha)
+}
+
+func (captcha *CaptchaImageRotate) AfterUpdate(tx *gorm.DB) error {
+	return cache.SetCaptchaCache(captcha)
+}
+
+func (captcha *CaptchaImageRotate) AfterDelete(tx *gorm.DB) error {
+	_ = oss.DeleteObject(captcha.Key)
+	return nil
 }
 
 func (captcha *CaptchaImageRotate) Json() string {
@@ -66,7 +80,6 @@ func (captcha *CaptchaImageRotate) Create() {
 	}
 
 	_, captcha.Angle = captchaImage.GenerateRotateCaptcha(captcha.Indicator)
-	cache.SetCaptchaCache(captcha)
 }
 
 // Verify 验证用户提交的旋转角度

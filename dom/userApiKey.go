@@ -1,5 +1,11 @@
 package dom
 
+import (
+	"gorm.io/gorm"
+
+	"github.com/oldfritter/lucy/internal/cache"
+)
+
 type UserApiKey struct {
 	CommonModel
 	UserId      int    `gorm:"index" form:"UserId" query:"UserId" validate:"required"`              // 关联用户
@@ -12,3 +18,25 @@ type UserApiKey struct {
 }
 
 func (*UserApiKey) TableName() string { return "user_api_key" }
+
+func (uak *UserApiKey) AfterCreate(tx *gorm.DB) error {
+	return syncApiKeyCache(uak)
+}
+
+func (uak *UserApiKey) AfterUpdate(tx *gorm.DB) error {
+	return syncApiKeyCache(uak)
+}
+
+func (uak *UserApiKey) AfterDelete(tx *gorm.DB) error {
+	_ = cache.DelApiKeyCache(uak.Key)
+	return nil
+}
+
+func syncApiKeyCache(uak *UserApiKey) error {
+	return cache.SetApiKeyCache(uak.Key, &cache.ApiKeyCache{
+		Secret:      uak.Secret,
+		IsActive:    uak.IsActive,
+		UserId:      uak.UserId,
+		CaptchaType: uak.CaptchaType,
+	})
+}

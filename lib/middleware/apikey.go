@@ -3,8 +3,7 @@ package middleware
 import (
 	"github.com/labstack/echo/v4"
 
-	"github.com/oldfritter/lucy/lib/db"
-	"github.com/oldfritter/lucy/model"
+	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/util"
 )
 
@@ -16,17 +15,19 @@ func ApiKeyAuth() echo.MiddlewareFunc {
 			if key == "" || secret == "" {
 				return util.BuildError("1005")
 			}
-			var uak model.UserApiKey
-			if err := db.MysqlDB.Where("key = ?", key).First(&uak).Error; err != nil {
+
+			cached, err := cache.GetApiKeyCache(key)
+			if err != nil {
 				return util.BuildError("1003")
 			}
-			if uak.Secret != secret {
+			if cached.Secret != secret {
 				return util.BuildError("1005")
 			}
-			if !uak.IsActive {
+			if !cached.IsActive {
 				return util.BuildError("1005")
 			}
-			c.Set("ApiKey", &uak)
+
+			c.Set("ApiKey", &cached)
 			return next(c)
 		}
 	}

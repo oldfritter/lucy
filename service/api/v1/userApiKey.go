@@ -103,19 +103,16 @@ func UpdateMyApiKey(c echo.Context) (err error) {
 	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
 	}
-	updates := map[string]any{}
 	if input.Name != "" {
-		updates["name"] = input.Name
+		uak.Name = input.Name
 	}
 	if input.IsActive != nil {
-		updates["is_active"] = *input.IsActive
+		uak.IsActive = *input.IsActive
 	}
-	if len(updates) == 0 {
+	if input.Name == "" && input.IsActive == nil {
 		return util.BuildError("1001")
 	}
-	db.MysqlDB.Model(&uak).Updates(updates)
-	// 重新加载以返回最新数据
-	db.MysqlDB.First(&uak, uak.Id)
+	db.MysqlDB.Save(&uak)
 	response := util.SuccessResponse()
 	response.Body = uak
 	return c.JSON(http.StatusOK, response)

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/oldfritter/lucy/dom"
-	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/internal/pool"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/lib/db"
@@ -284,7 +283,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 			return err
 		}
 		setVerifyPositions5(&cc, points)
-		if err := uploadAndCache(&cc, cc.Key, img); err != nil {
+		if err := uploadImage(cc.Key, img); err != nil {
 			return err
 		}
 		tx.Save(&cc)
@@ -303,7 +302,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 			return err
 		}
 		setVerifyPositions6(&cc, points)
-		if err := uploadAndCache(&cc, cc.Key, img); err != nil {
+		if err := uploadImage(cc.Key, img); err != nil {
 			return err
 		}
 		tx.Save(&cc)
@@ -324,7 +323,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		return err
 	}
 	setVerifyPositions4(&c, points)
-	if err := uploadAndCache(&c, c.Key, img); err != nil {
+	if err := uploadImage(c.Key, img); err != nil {
 		return err
 	}
 	tx.Save(&c)
@@ -363,33 +362,16 @@ func setVerifyPositions6(c *model.CaptchaText6, points []image.Point) {
 	}
 }
 
-// captchaRecord 文字验证码需暴露的字段
-type captchaRecord interface {
-	GetCaptcha() string
-	Json() string
-}
-
-// uploadAndCache 将图片编码为 PNG 上传 OSS（用 Key 作路径），并写入 Redis 缓存
-func uploadAndCache(c captchaRecord, ossKey string, img image.Image) error {
+// uploadImage 将图片编码为 PNG 上传 OSS（缓存由 GORM 钩子自动管理）
+func uploadImage(ossKey string, img image.Image) error {
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return err
 	}
 	b := buf.Bytes()
-	if _, err := oss.PutObject(ossKey, &b); err != nil {
-		return err
-	}
-	return cache.SetCaptchaCache(&scheduleCaptcha{cc: c, data: c.Json()})
+	_, err := oss.PutObject(ossKey, &b)
+	return err
 }
-
-// scheduleCaptcha 适配 cache.CaptchaCacher 接口
-type scheduleCaptcha struct {
-	cc   captchaRecord
-	data string
-}
-
-func (sc *scheduleCaptcha) GetCaptcha() string { return sc.cc.GetCaptcha() }
-func (sc *scheduleCaptcha) Json() string       { return sc.data }
 
 func createRotateCaptcha(campaign *model.Campaign) error {
 	c := model.CaptchaImageRotate{

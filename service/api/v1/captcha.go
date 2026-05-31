@@ -157,7 +157,7 @@ func lookupCaptchaType(captcha string) string {
 
 // FetchCaptcha 使用 ApiKey 中间件认证，从对应类型的池中捞取验证码
 func FetchCaptcha(c echo.Context) (err error) {
-	apiKey := c.Get("ApiKey").(*model.UserApiKey)
+	apiKey := c.Get("ApiKey").(*cache.ApiKeyCache)
 
 	// 从对应类型的池中捞取一个 uid
 	uid, err := pool.PopFromPool(apiKey.CaptchaType)

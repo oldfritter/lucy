@@ -9,6 +9,7 @@ import (
 	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
+	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/util"
 )
 
@@ -37,6 +38,19 @@ func (*CaptchaText5) TableName() string {
 
 func (captcha *CaptchaText5) GetCaptcha() string {
 	return fmt.Sprintf("text:5:%s", captcha.Uid)
+}
+
+func (captcha *CaptchaText5) AfterCreate(tx *gorm.DB) error {
+	return cache.SetCaptchaCache(captcha)
+}
+
+func (captcha *CaptchaText5) AfterUpdate(tx *gorm.DB) error {
+	return cache.SetCaptchaCache(captcha)
+}
+
+func (captcha *CaptchaText5) AfterDelete(tx *gorm.DB) error {
+	_ = oss.DeleteObject(captcha.Key)
+	return nil
 }
 
 func (captcha *CaptchaText5) Json() string {
@@ -86,7 +100,6 @@ func (captcha *CaptchaText5) Create() {
 	captchaImage.GenerateCaptchaImage(
 		[]string{captcha.Prompt1, captcha.Prompt2, captcha.Prompt3, captcha.Prompt4, captcha.Prompt5},
 	)
-	cache.SetCaptchaCache(captcha)
 }
 
 func (captcha *CaptchaText5) Verify(attrs map[string]any) (yes bool) {
