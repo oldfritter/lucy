@@ -21,6 +21,12 @@ func (r *Refund) QueryParams(p map[string]string) map[string][]any {
 	if p["Status"] != "" {
 		params["status"] = []any{"=", p["Status"]}
 	}
+	if p["RefundNo"] != "" {
+		params["refund_no"] = []any{"=", p["RefundNo"]}
+	}
+	if p["TransactionId"] != "" {
+		params["transaction_id"] = []any{"=", p["TransactionId"]}
+	}
 	return params
 }
 

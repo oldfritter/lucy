@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+
 	"gorm.io/gorm"
 
 	"github.com/oldfritter/lucy/dom"
@@ -13,6 +15,17 @@ type Order struct {
 	User     *User     `gorm:"foreignKey:UserId" json:",omitempty"`
 	Currency *Currency `gorm:"foreignKey:CurrencyId" json:",omitempty"`
 	Incomes  []*Income `gorm:"foreignKey:OrderId" json:",omitempty"`
+}
+
+// ActivateReason 支付完成后激活 Reason（根据 ReasonType 多态处理）
+func ActivateReason(db *gorm.DB, reasonType string, reasonId int) error {
+	switch reasonType {
+	case "Campaign":
+		return db.Model(&dom.Campaign{}).Where("id = ?", reasonId).
+			Update("status", dom.CampaignStatusAvailable).Error
+	default:
+		return fmt.Errorf("unknown reason type: %s", reasonType)
+	}
 }
 
 func (o *Order) QueryParams(p map[string]string) map[string][]any {

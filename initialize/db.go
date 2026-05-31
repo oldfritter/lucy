@@ -25,5 +25,8 @@ func AutoMigrate(db *gorm.DB) {
 		&model.UserApiKey{},
 		&model.Image{},
 		&model.Campaign{},
+		&model.Order{},
+		&model.Income{},
+		&model.Refund{},
 	)
 }

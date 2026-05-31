@@ -25,6 +25,9 @@ func (i *Income) QueryParams(p map[string]string) map[string][]any {
 	if p["Status"] != "" {
 		params["status"] = []any{"=", p["Status"]}
 	}
+	if p["TransactionId"] != "" {
+		params["transaction_id"] = []any{"=", p["TransactionId"]}
+	}
 	return params
 }
 

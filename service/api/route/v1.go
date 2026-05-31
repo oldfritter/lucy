@@ -21,6 +21,10 @@ func SetV1Interface(e *echo.Echo) {
 		userGroup.POST("/login", v1.Login)
 	}
 
+	// 支付宝 / 微信支付回调通知（无需认证）
+	setAlipayRoutes(v1Group)
+	setWechatRoutes(v1Group)
+
 	authGroup := v1Group.Group("", middleware.Auth())
 	{
 		userGroup := authGroup.Group("/user")
@@ -56,5 +60,17 @@ func SetV1Interface(e *echo.Echo) {
 			campaignGroup.PUT("/:id", v1.UpdateMyCampaign)
 			campaignGroup.DELETE("/:id", v1.DeleteMyCampaign)
 		}
+
+		orderGroup := authGroup.Group("/order")
+		{
+			orderGroup.POST("", v1.CreateOrder)
+			orderGroup.POST("/", v1.CreateOrder)
+			orderGroup.GET("/list", v1.GetMyOrderList)
+			orderGroup.GET("/:id", v1.GetMyOrder)
+		}
+
+		// 支付宝 / 微信支付（需要认证）
+		setAlipayAuthRoutes(authGroup)
+		setWechatAuthRoutes(authGroup)
 	}
 }
