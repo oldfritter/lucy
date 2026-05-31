@@ -79,7 +79,7 @@ func PopFromPool(captchaType string) (string, error) {
 func RemoveFromPool(uid string) (bool, error) {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
-	types := []string{"text4", "text5", "text6", "rotate"}
+	types := []string{"text:4", "text:5", "text:6", "image:rotate"}
 	for _, t := range types {
 		n, err := redis.Int(conn.Do("SREM", poolKey(t), uid))
 		if err != nil {

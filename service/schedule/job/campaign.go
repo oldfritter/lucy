@@ -159,13 +159,13 @@ func generateOne(campaign *model.Campaign) error {
 	}
 
 	switch campaign.CaptchaType {
-	case "rotate":
+	case "image:rotate":
 		return createRotateCaptcha(campaign)
-	case "text5":
+	case "text:5":
 		return createText5Captcha(campaign, prompts)
-	case "text6":
+	case "text:6":
 		return createText6Captcha(campaign, prompts)
-	default: // text4
+	default: // text:4
 		return createText4Captcha(campaign, prompts)
 	}
 }
@@ -230,9 +230,9 @@ func pickSysPrompts(captchaType string) []string {
 
 func promptCount(captchaType string) int {
 	switch captchaType {
-	case "text5":
+	case "text:5":
 		return 5
-	case "text6":
+	case "text:6":
 		return 6
 	default:
 		return 4
@@ -288,7 +288,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
-		pool.AddToPool("text5", cc.Uid)
+		pool.AddToPool("text:5", cc.Uid)
 		return nil
 	case 6:
 		cc := model.CaptchaText6{
@@ -307,7 +307,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
-		pool.AddToPool("text6", cc.Uid)
+		pool.AddToPool("text:6", cc.Uid)
 		return nil
 	default:
 		c = model.CaptchaText4{
@@ -328,7 +328,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 	}
 	tx.Save(&c)
 	tx.DbCommit()
-	pool.AddToPool("text4", c.Uid)
+	pool.AddToPool("text:4", c.Uid)
 	return nil
 }
 
@@ -392,7 +392,7 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	}
 	c.Create()
 	tx.DbCommit()
-	pool.AddToPool("rotate", c.Uid)
+	pool.AddToPool("image:rotate", c.Uid)
 	return nil
 }
 

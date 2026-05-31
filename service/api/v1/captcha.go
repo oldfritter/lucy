@@ -61,10 +61,10 @@ func verifyTextImageByUid(c echo.Context, uid string, req verifyRequest) error {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			pool.AddToVerifiedPool("text4", uid, false)
+			pool.AddToVerifiedPool("text:4", uid, false)
 			return util.BuildError("1008")
 		}
-		pool.AddToVerifiedPool("text4", uid, true)
+		pool.AddToVerifiedPool("text:4", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -75,10 +75,10 @@ func verifyTextImageByUid(c echo.Context, uid string, req verifyRequest) error {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			pool.AddToVerifiedPool("text5", uid, false)
+			pool.AddToVerifiedPool("text:5", uid, false)
 			return util.BuildError("1008")
 		}
-		pool.AddToVerifiedPool("text5", uid, true)
+		pool.AddToVerifiedPool("text:5", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -89,10 +89,10 @@ func verifyTextImageByUid(c echo.Context, uid string, req verifyRequest) error {
 			return util.BuildError("1003")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			pool.AddToVerifiedPool("text6", uid, false)
+			pool.AddToVerifiedPool("text:6", uid, false)
 			return util.BuildError("1008")
 		}
-		pool.AddToVerifiedPool("text6", uid, true)
+		pool.AddToVerifiedPool("text:6", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -107,10 +107,10 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 		return util.BuildError("1003")
 	}
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
-		pool.AddToVerifiedPool("rotate", uid, false)
+		pool.AddToVerifiedPool("image:rotate", uid, false)
 		return util.BuildError("1008")
 	}
-	pool.AddToVerifiedPool("rotate", uid, true)
+	pool.AddToVerifiedPool("image:rotate", uid, true)
 	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 	resp := util.SuccessResponse()
 	resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -131,16 +131,7 @@ func cleanupCaptcha(ossKey, captchaId string) {
 }
 
 func cacheIdForType(captchaType, uid string) string {
-	switch captchaType {
-	case "rotate":
-		return "image:rotate:" + uid
-	case "text5":
-		return "text:5:" + uid
-	case "text6":
-		return "text:6:" + uid
-	default:
-		return "text:4:" + uid
-	}
+	return captchaType + ":" + uid
 }
 
 func lookupCaptchaType(captcha string) string {

@@ -11,7 +11,7 @@ import (
 
 func init() {
 	Register(Job{
-		Name: "batch-status",
+		Name: "batch-update-captcha-status",
 		Spec: "@daily",
 		Func: batchUpdateCaptchaStatus,
 	})
@@ -22,10 +22,10 @@ var captchaTypeTable = []struct {
 	poolType string
 	model    any
 }{
-	{"text4", &model.CaptchaText4{}},
-	{"text5", &model.CaptchaText5{}},
-	{"text6", &model.CaptchaText6{}},
-	{"rotate", &model.CaptchaImageRotate{}},
+	{"text:4", &model.CaptchaText4{}},
+	{"text:5", &model.CaptchaText5{}},
+	{"text:6", &model.CaptchaText6{}},
+	{"image:rotate", &model.CaptchaImageRotate{}},
 }
 
 // batchUpdateCaptchaStatus 凌晨按类型分别取出并批量写入验证状态
@@ -33,7 +33,7 @@ func batchUpdateCaptchaStatus() {
 	for _, ct := range captchaTypeTable {
 		success, failed, err := pool.DrainVerifiedPool(ct.poolType)
 		if err != nil {
-			log.Printf("[batch-status] drain %s pool failed: %v", ct.poolType, err)
+			log.Printf("[batch-update-captcha-status] drain %s pool failed: %v", ct.poolType, err)
 			continue
 		}
 
@@ -42,9 +42,9 @@ func batchUpdateCaptchaStatus() {
 				Where("uid IN ?", success).
 				Update("status", dom.CaptchaStatusSuccess)
 			if result.Error != nil {
-				log.Printf("[batch-status] %s success update failed: %v", ct.poolType, result.Error)
+				log.Printf("[batch-update-captcha-status] %s success update failed: %v", ct.poolType, result.Error)
 			} else {
-				log.Printf("[batch-status] %s success=%d", ct.poolType, result.RowsAffected)
+				log.Printf("[batch-update-captcha-status] %s success=%d", ct.poolType, result.RowsAffected)
 			}
 		}
 
@@ -53,9 +53,9 @@ func batchUpdateCaptchaStatus() {
 				Where("uid IN ?", failed).
 				Update("status", dom.CaptchaStatusFailed)
 			if result.Error != nil {
-				log.Printf("[batch-status] %s failed update failed: %v", ct.poolType, result.Error)
+				log.Printf("[batch-update-captcha-status] %s failed update failed: %v", ct.poolType, result.Error)
 			} else {
-				log.Printf("[batch-status] %s failed=%d", ct.poolType, result.RowsAffected)
+				log.Printf("[batch-update-captcha-status] %s failed=%d", ct.poolType, result.RowsAffected)
 			}
 		}
 	}
