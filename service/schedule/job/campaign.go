@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/lib/db"
@@ -103,7 +104,10 @@ func fillCampaignCaptchas() {
 
 		needed := campaign.CaptchaCount - int(count)
 		if needed <= 0 {
-			markCompleted(&campaign)
+			// 用户投放达上限 → 标记完成；系统投放跳过本轮（池中有足够待用验证码）
+			if campaign.Type == dom.CampaignTypeUser {
+				markCompleted(&campaign)
+			}
 			continue
 		}
 
@@ -135,7 +139,9 @@ func fillCampaignCaptchas() {
 		// 重新统计
 		count = countCaptchasByCampaign(campaign.Id)
 		if int(count) >= campaign.CaptchaCount {
-			markCompleted(&campaign)
+			if campaign.Type == dom.CampaignTypeUser {
+				markCompleted(&campaign)
+			}
 		}
 	}
 }

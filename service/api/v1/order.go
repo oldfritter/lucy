@@ -28,7 +28,6 @@ func CreateOrder(c echo.Context) (err error) {
 		CaptchaType       string `form:"CaptchaType"`
 		BackgroundImages  string `form:"BackgroundImages"`
 		WordBank          string `form:"WordBank"`
-		UseSystemWordBank bool   `form:"UseSystemWordBank"`
 		CaptchaCount      int    `form:"CaptchaCount"`
 	}
 	if err = c.Bind(&input); err != nil {
@@ -67,8 +66,8 @@ func CreateOrder(c echo.Context) (err error) {
 			CaptchaType:       input.CaptchaType,
 			BackgroundImages:  input.BackgroundImages,
 			WordBank:          input.WordBank,
-			UseSystemWordBank: input.UseSystemWordBank,
 			CaptchaCount:      input.CaptchaCount,
+			Type:              dom.CampaignTypeUser,
 			Status:            dom.StatusPending,
 		},
 	}

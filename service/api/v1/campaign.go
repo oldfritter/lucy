@@ -85,7 +85,6 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 		CaptchaType       string `form:"CaptchaType"`
 		BackgroundImages  string `form:"BackgroundImages"`
 		WordBank          string `form:"WordBank"`
-		UseSystemWordBank bool   `form:"UseSystemWordBank"`
 		CaptchaCount      int    `form:"CaptchaCount" validate:"omitempty,min=1"`
 	}
 	if err = c.Bind(&input); err != nil {
@@ -104,10 +103,6 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 	}
 	if input.WordBank != "" {
 		updates["word_bank"] = input.WordBank
-	}
-	// UseSystemWordBank 是 bool，允许 false 值，用 c.FormValue 直接读取
-	if c.FormValue("UseSystemWordBank") != "" {
-		updates["use_system_word_bank"] = input.UseSystemWordBank
 	}
 	if input.CaptchaCount > 0 {
 		updates["captcha_count"] = input.CaptchaCount
