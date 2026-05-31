@@ -9,6 +9,13 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
+// Captcha 状态常量
+const (
+	CaptchaStatusActive  = 1  // 待验证
+	CaptchaStatusSuccess = 2  // 验证成功
+	CaptchaStatusFailed  = -1 // 验证失败
+)
+
 type Captcha struct {
 	CommonModel
 	UserId       int    `form:"UserId" query:"UserId"`                           // 所属用户

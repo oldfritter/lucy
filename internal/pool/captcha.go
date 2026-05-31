@@ -11,6 +11,54 @@ func poolKey(captchaType string) string {
 	return base.RedisNamespace + ":captcha:pool:" + captchaType
 }
 
+// ── 验证结果批量更新池 ──
+
+func verifiedSuccessKey(captchaType string) string {
+	return base.RedisNamespace + ":captcha:verified:success:" + captchaType
+}
+func verifiedFailedKey(captchaType string) string {
+	return base.RedisNamespace + ":captcha:verified:failed:" + captchaType
+}
+
+// AddToVerifiedPool 将 UID 放入对应类型的验证结果池（success / failed）
+func AddToVerifiedPool(captchaType, uid string, success bool) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	key := verifiedFailedKey(captchaType)
+	if success {
+		key = verifiedSuccessKey(captchaType)
+	}
+	_, err := conn.Do("SADD", key, uid)
+	return err
+}
+
+// DrainVerifiedPool 取出并清空某类型验证结果池，返回两组 UID
+func DrainVerifiedPool(captchaType string) (success []string, failed []string, err error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+
+	sk := verifiedSuccessKey(captchaType)
+	fk := verifiedFailedKey(captchaType)
+
+	success, err = redis.Strings(conn.Do("SMEMBERS", sk))
+	if err != nil && err != redis.ErrNil {
+		return nil, nil, err
+	}
+	if len(success) > 0 {
+		conn.Do("DEL", sk)
+	}
+
+	failed, err = redis.Strings(conn.Do("SMEMBERS", fk))
+	if err != nil && err != redis.ErrNil {
+		return nil, nil, err
+	}
+	if len(failed) > 0 {
+		conn.Do("DEL", fk)
+	}
+
+	return success, failed, nil
+}
+
 func AddToPool(captchaType, uid string) error {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
