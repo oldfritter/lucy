@@ -38,8 +38,10 @@ func (captcha *CaptchaText4) GetCaptcha() string {
 
 func (captcha *CaptchaText4) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id":  fmt.Sprintf("text:4:%s", captcha.Uid),
-		"key": captcha.Key,
+		"id":         fmt.Sprintf("text:4:%s", captcha.Uid),
+		"uid":        captcha.Uid,
+		"valid_code": captcha.ValidCode,
+		"key":        captcha.Key,
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,

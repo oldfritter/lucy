@@ -15,6 +15,9 @@ func SetV1Interface(e *echo.Echo) {
 		captchaGroup.POST("/verify", v1.VerifyCaptcha)
 	}
 
+	// 获取验证码（ApiKey 认证：X-Api-Key + X-Api-Secret）
+	v1Group.GET("/captcha/fetch", v1.FetchCaptcha, middleware.ApiKeyAuth())
+
 	userGroup := v1Group.Group("/user")
 	{
 		userGroup.POST("/register", v1.Register)

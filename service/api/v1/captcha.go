@@ -3,12 +3,12 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/oldfritter/lucy/internal/cache"
+	"github.com/oldfritter/lucy/internal/pool"
 	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/model"
@@ -26,37 +26,115 @@ type verifyRequest struct {
 	Angle   *float64      `json:"angle,omitempty"`
 }
 
-// VerifyCaptcha 统一验证入口：优先从 Redis 缓存判断类型，回退到请求字段推断
+// VerifyCaptcha 从池中捞取验证码并验证，Uid 作为 captcha 参数传入
 func VerifyCaptcha(c echo.Context) (err error) {
 	var req verifyRequest
 	if err = c.Bind(&req); err != nil {
 		return util.BuildError("1001")
 	}
-	if req.Captcha == "" {
+	uid := req.Captcha
+	if uid == "" {
 		return util.BuildError("1001")
 	}
 
-	// 从 Redis 缓存获取验证码类型
-	captchaType := lookupCaptchaType(req.Captcha)
+	// 从池中捞取，确保只能消费一次
+	removed, err := pool.RemoveFromPool(uid)
+	if err != nil || !removed {
+		return util.BuildError("1008")
+	}
 
+	// 根据请求字段判断类型
+	if req.Angle != nil {
+		return verifyRotateByUid(c, uid, req)
+	}
+	if len(req.Points) >= 4 && len(req.Points) <= 6 {
+		return verifyTextImageByUid(c, uid, req)
+	}
+	return util.BuildError("1001")
+}
+
+func verifyTextImageByUid(c echo.Context, uid string, req verifyRequest) error {
+	switch len(req.Points) {
+	case 4:
+		var captcha model.CaptchaText4
+		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
+			return util.BuildError("1003")
+		}
+		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
+			return util.BuildError("1008")
+		}
+		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		resp := util.SuccessResponse()
+		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
+		return c.JSON(http.StatusOK, resp)
+	case 5:
+		var captcha model.CaptchaText5
+		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
+			return util.BuildError("1003")
+		}
+		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
+			return util.BuildError("1008")
+		}
+		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		resp := util.SuccessResponse()
+		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
+		return c.JSON(http.StatusOK, resp)
+	case 6:
+		var captcha model.CaptchaText6
+		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
+			return util.BuildError("1003")
+		}
+		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
+			return util.BuildError("1008")
+		}
+		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		resp := util.SuccessResponse()
+		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
+		return c.JSON(http.StatusOK, resp)
+	}
+	return util.BuildError("1001")
+}
+
+func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
+	var captcha model.CaptchaImageRotate
+	if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
+		return util.BuildError("1003")
+	}
+	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
+		return util.BuildError("1008")
+	}
+	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+	resp := util.SuccessResponse()
+	resp.Body = map[string]string{"valid_code": captcha.ValidCode}
+	return c.JSON(http.StatusOK, resp)
+}
+
+func pointsToInts(input []verifyPoint) [][]int {
+	points := make([][]int, len(input))
+	for i, p := range input {
+		points[i] = []int{p.X, p.Y}
+	}
+	return points
+}
+
+func cleanupCaptcha(ossKey, captchaId string) {
+	_ = oss.DeleteObject(ossKey)
+	_ = cache.DelCaptchaCache(captchaId)
+}
+
+func cacheIdForType(captchaType, uid string) string {
 	switch captchaType {
 	case "rotate":
-		return verifyRotate(c, req)
-	case "text":
-		return verifyTextImage(c, req)
+		return "image:rotate:" + uid
+	case "text5":
+		return "text:5:" + uid
+	case "text6":
+		return "text:6:" + uid
 	default:
-		// 缓存未命中，按请求字段回退判断
-		if req.Angle != nil {
-			return verifyRotate(c, req)
-		}
-		if len(req.Points) >= 4 && len(req.Points) <= 6 {
-			return verifyTextImage(c, req)
-		}
-		return util.BuildError("1001")
+		return "text:4:" + uid
 	}
 }
 
-// lookupCaptchaType 从 Redis 缓存中解析验证码类型（"text" | "rotate" | ""）
 func lookupCaptchaType(captcha string) string {
 	cached, err := cache.GetCaptchaCache(captcha)
 	if err != nil || cached == "" {
@@ -77,71 +155,44 @@ func lookupCaptchaType(captcha string) string {
 	return ""
 }
 
-func verifyTextImage(c echo.Context, req verifyRequest) error {
-	switch len(req.Points) {
-	case 4:
-		var captcha model.CaptchaText4
-		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
-		}
-		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			return util.BuildError("1008")
-		}
-		cleanupCaptcha(captcha.Key, req.Captcha)
-	case 5:
-		var captcha model.CaptchaText5
-		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
-		}
-		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			return util.BuildError("1008")
-		}
-		cleanupCaptcha(captcha.Key, req.Captcha)
-	case 6:
-		var captcha model.CaptchaText6
-		if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
-		}
-		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
-			return util.BuildError("1008")
-		}
-		cleanupCaptcha(captcha.Key, req.Captcha)
-	}
-	return c.JSON(http.StatusOK, util.SuccessResponse())
-}
+// FetchCaptcha 使用 ApiKey 中间件认证，从对应类型的池中捞取验证码
+func FetchCaptcha(c echo.Context) (err error) {
+	apiKey := c.Get("ApiKey").(*model.UserApiKey)
 
-func verifyRotate(c echo.Context, req verifyRequest) error {
-	var captcha model.CaptchaImageRotate
-	if err := db.MysqlDB.Where("id = ?", parseCaptchaID(req.Captcha)).First(&captcha).Error; err != nil {
+	// 从对应类型的池中捞取一个 uid
+	uid, err := pool.PopFromPool(apiKey.CaptchaType)
+	if err != nil {
+		return util.BuildError("1007", "捞取验证码失败")
+	}
+	if uid == "" {
+		return util.BuildError("1008", "池中无可用验证码")
+	}
+
+	// 从缓存获取验证码数据
+	cacheId := cacheIdForType(apiKey.CaptchaType, uid)
+	cached, err := cache.GetCaptchaCache(cacheId)
+	if err != nil || cached == "" {
+		pool.AddToPool(apiKey.CaptchaType, uid) // 回放
 		return util.BuildError("1003")
 	}
-	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
-		return util.BuildError("1008")
-	}
-	cleanupCaptcha(captcha.Key, req.Captcha)
-	return c.JSON(http.StatusOK, util.SuccessResponse())
-}
 
-func pointsToInts(input []verifyPoint) [][]int {
-	points := make([][]int, len(input))
-	for i, p := range input {
-		points[i] = []int{p.X, p.Y}
+	var capData struct {
+		Uid       string `json:"uid"`
+		ValidCode string `json:"valid_code"`
+		Key       string `json:"key"`
 	}
-	return points
-}
-
-// cleanupCaptcha 验证码消费后清理 OSS 图片和 Redis 缓存
-func cleanupCaptcha(ossKey, captchaId string) {
-	_ = oss.DeleteObject(ossKey)
-	_ = cache.DelCaptchaCache(captchaId)
-}
-
-// parseCaptchaID 从 "text-4-123" / "rotate-456" 中提取末尾数字 ID
-func parseCaptchaID(captcha string) int {
-	idx := strings.LastIndex(captcha, "-")
-	if idx < 0 {
-		return 0
+	if err = json.Unmarshal([]byte(cached), &capData); err != nil {
+		pool.AddToPool(apiKey.CaptchaType, uid)
+		return util.BuildError("1003")
 	}
-	id, _ := strconv.Atoi(captcha[idx+1:])
-	return id
+
+	respBody := map[string]string{
+		"uid":        capData.Uid,
+		"valid_code": capData.ValidCode,
+		"key":        oss.OssAsset() + "/" + capData.Key,
+	}
+
+	response := util.SuccessResponse()
+	response.Body = respBody
+	return c.JSON(http.StatusOK, response)
 }

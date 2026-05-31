@@ -26,7 +26,7 @@ func (c *Captcha) BeforeCreate(db *gorm.DB) (err error) {
 		c.Suffix = "png"
 	}
 	if c.Uid == "" {
-		c.Uid = util.RandStringRunes(16)
+		c.Uid = util.RandStringRunes(32)
 	}
 	if c.ValidCode == "" {
 		c.ValidCode = util.RandStringRunes(32)

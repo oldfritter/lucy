@@ -11,6 +11,7 @@ import (
 
 	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
+	"github.com/oldfritter/lucy/internal/pool"
 	captchaImage "github.com/oldfritter/lucy/lib/captcha"
 	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/lib/storage/oss"
@@ -288,6 +289,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
+		pool.AddToPool("text5", cc.Uid)
 		return nil
 	case 6:
 		cc := model.CaptchaText6{
@@ -306,6 +308,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		tx.Save(&cc)
 		tx.DbCommit()
+		pool.AddToPool("text6", cc.Uid)
 		return nil
 	default:
 		c = model.CaptchaText4{
@@ -326,7 +329,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 	}
 	tx.Save(&c)
 	tx.DbCommit()
-
+	pool.AddToPool("text4", c.Uid)
 	return nil
 }
 
@@ -407,7 +410,7 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	}
 	c.Create()
 	tx.DbCommit()
-
+	pool.AddToPool("rotate", c.Uid)
 	return nil
 }
 
