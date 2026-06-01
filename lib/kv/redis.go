@@ -71,6 +71,7 @@ func newRedisPool(redisName string) *redis.Pool {
 					return nil, err
 				}
 			}
+			log.Printf("redis %s connect success!", redisName)
 			return conn, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
