@@ -54,10 +54,10 @@ func main() {
 }
 
 func setPid() {
-	if err := os.MkdirAll("pids", 0755); err != nil {
+	if err := os.MkdirAll("pid", 0755); err != nil {
 		log.Fatalf("create folder error: %v", err)
 	}
-	if err := os.WriteFile("pids/schedule.pid", []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
+	if err := os.WriteFile("pid/schedule.pid", []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
 		log.Fatalf("write pid error: %v", err)
 	}
 }
