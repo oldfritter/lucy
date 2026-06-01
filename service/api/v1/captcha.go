@@ -3,7 +3,6 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -134,25 +133,7 @@ func cacheIdForType(captchaType, uid string) string {
 	return captchaType + ":" + uid
 }
 
-func lookupCaptchaType(captcha string) string {
-	cached, err := cache.GetCaptchaCache(captcha)
-	if err != nil || cached == "" {
-		return ""
-	}
-	var wrapper struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal([]byte(cached), &wrapper); err != nil {
-		return ""
-	}
-	switch {
-	case strings.HasPrefix(wrapper.ID, "text"):
-		return "text"
-	case strings.HasPrefix(wrapper.ID, "rotate"):
-		return "rotate"
-	}
-	return ""
-}
+
 
 // FetchCaptcha 使用 ApiKey 中间件认证，从对应类型的池中捞取验证码
 func FetchCaptcha(c echo.Context) (err error) {

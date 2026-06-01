@@ -45,7 +45,6 @@ func (captcha *CaptchaImageRotate) AfterDelete(tx *gorm.DB) error {
 
 func (captcha *CaptchaImageRotate) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id":         fmt.Sprintf("image:rotate:%s", captcha.Uid),
 		"uid":        captcha.Uid,
 		"valid_code": captcha.ValidCode,
 		"key":        captcha.Key,

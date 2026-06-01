@@ -55,7 +55,6 @@ func (captcha *CaptchaText5) AfterDelete(tx *gorm.DB) error {
 
 func (captcha *CaptchaText5) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"id":         fmt.Sprintf("text:5:%s", captcha.Uid),
 		"uid":        captcha.Uid,
 		"valid_code": captcha.ValidCode,
 		"key":        captcha.Key,
