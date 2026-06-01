@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/oldfritter/lucy/base"
+	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/model"
 	"github.com/oldfritter/lucy/util"
@@ -68,15 +69,36 @@ func CreateMyApiKey(c echo.Context) (err error) {
 		return util.BuildError("1009")
 	}
 
-	var uak model.UserApiKey
-	if err = c.Bind(&uak); err != nil {
+	var input struct {
+		ProductId int    `form:"ProductId" validate:"required"`
+		Provider  string `form:"Provider" validate:"required,max=32"`
+		Name      string `form:"Name" validate:"max=64"`
+	}
+	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
 	}
-	uak.UserId = claims.UserId
+	if err = c.Validate(&input); err != nil {
+		return util.BuildError("1002", err.Error())
+	}
+
+	// 验证商品存在，获取 CaptchaType 和 PerMinuteLimit
+	var product model.Product
+	if err = db.MysqlDB.First(&product, input.ProductId).Error; err != nil {
+		return util.BuildError("1003", "商品不存在")
+	}
+
+	uak := model.UserApiKey{
+		UserApiKey: dom.UserApiKey{
+			UserId:         claims.UserId,
+			ProductId:      input.ProductId,
+			CaptchaType:    product.CaptchaType,
+			PerMinuteLimit: product.PerMinuteLimit,
+			Provider:       input.Provider,
+			Name:           input.Name,
+		},
+	}
 	uak.GenerateKeys()
-	// if err = c.Validate(&uak); err != nil {
-	//   return util.BuildError("1002")
-	// }
+
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&uak).Error != nil {

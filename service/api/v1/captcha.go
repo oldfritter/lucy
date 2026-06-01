@@ -158,6 +158,18 @@ func lookupCaptchaType(captcha string) string {
 func FetchCaptcha(c echo.Context) (err error) {
 	apiKey := c.Get("ApiKey").(*cache.ApiKeyCache)
 
+	// 每分钟限速检查
+	allowed, err := cache.CheckRateLimit(apiKey.Secret, apiKey.PerMinuteLimit)
+	if err != nil {
+		return util.BuildError("1007", "速率检查失败")
+	}
+	if !allowed {
+		resp := util.SuccessResponse()
+		resp.Head["Code"] = "1010"
+		resp.Head["Msg"] = "超出每分钟最大验证次数"
+		return c.JSON(http.StatusTooManyRequests, resp)
+	}
+
 	// 从对应类型的池中捞取一个 uid
 	uid, err := pool.PopFromPool(apiKey.CaptchaType)
 	if err != nil {

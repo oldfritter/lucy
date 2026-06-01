@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/model"
 	"github.com/oldfritter/lucy/util"
@@ -43,16 +44,39 @@ func GetUserApiKey(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-// CreateUserApiKey 创建 ApiKey（Key、Secret 由系统自动生成，不允许输入）
+// CreateUserApiKey 创建 ApiKey（Key、Secret 由系统自动生成）
 func CreateUserApiKey(c echo.Context) (err error) {
-	var uak model.UserApiKey
-	if err = c.Bind(&uak); err != nil {
+	var input struct {
+		UserId    int    `form:"UserId" validate:"required"`
+		ProductId int    `form:"ProductId" validate:"required"`
+		Provider  string `form:"Provider" validate:"required,max=32"`
+		Name      string `form:"Name" validate:"max=64"`
+	}
+	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
 	}
-	uak.GenerateKeys()
-	if err = c.Validate(&uak); err != nil {
+	if err = c.Validate(&input); err != nil {
 		return util.BuildError("1002")
 	}
+
+	// 验证商品存在
+	var product model.Product
+	if err = db.MysqlDB.First(&product, input.ProductId).Error; err != nil {
+		return util.BuildError("1003", "商品不存在")
+	}
+
+	uak := model.UserApiKey{
+		UserApiKey: dom.UserApiKey{
+			UserId:         input.UserId,
+			ProductId:      input.ProductId,
+			CaptchaType:    product.CaptchaType,
+			PerMinuteLimit: product.PerMinuteLimit,
+			Provider:       input.Provider,
+			Name:           input.Name,
+		},
+	}
+	uak.GenerateKeys()
+
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&uak).Error != nil {
