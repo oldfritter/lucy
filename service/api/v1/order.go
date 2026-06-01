@@ -15,20 +15,12 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-// CreateOrder 创建订单并同时创建关联的 Reason
+// CreateOrder 依据 CampaignId 查出关联商品定价，据此生成订单
 func CreateOrder(c echo.Context) (err error) {
 	claims, _ := base.GetClaim(c)
 
 	var input struct {
-		CurrencyId     int    `form:"CurrencyId" validate:"required"`
-		Amount         int    `form:"Amount" validate:"required,min=1"`
-		DeductedAmount int    `form:"DeductedAmount"`
-		ReasonType     string `form:"ReasonType" validate:"required"`
-		Name              string `form:"Name"`
-		CaptchaType       string `form:"CaptchaType"`
-		BackgroundImages  string `form:"BackgroundImages"`
-		WordBank          string `form:"WordBank"`
-		CaptchaCount      int    `form:"CaptchaCount"`
+		CampaignId int `form:"CampaignId" validate:"required"`
 	}
 	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
@@ -37,54 +29,36 @@ func CreateOrder(c echo.Context) (err error) {
 		return util.BuildError("1002", err.Error())
 	}
 
-	if input.ReasonType != "Campaign" {
-		return util.BuildError("1005", "不支持的 ReasonType")
+	// 验证 Campaign 存在且属于当前用户，同时加载关联商品
+	var campaign model.Campaign
+	if err = db.MysqlDB.Preload("Product").Where("id = ? AND user_id = ?", input.CampaignId, claims.UserId).
+		First(&campaign).Error; err != nil {
+		return util.BuildError("1003", "投放不存在")
 	}
-	if input.Name == "" {
-		return util.BuildError("1002", "Campaign Name 不能为空")
+	if campaign.Status != dom.StatusPending {
+		return util.BuildError("1002", "投放状态不允许创建订单")
 	}
-	if input.CaptchaType == "" {
-		input.CaptchaType = "text4"
-	}
-	if input.CaptchaCount < 1 {
-		input.CaptchaCount = 1
+	if campaign.Product == nil {
+		return util.BuildError("1003", "投放关联商品不存在")
 	}
 
-	finalAmount := input.Amount - input.DeductedAmount
-	if finalAmount < 0 {
-		finalAmount = 0
-	}
+	amount := campaign.Product.Amount
+	finalAmount := amount
 	orderNo := fmt.Sprintf("LC%s%s", time.Now().Format("20060102150405"), util.RandNumberStringRunes(6))
 
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 
-	campaign := model.Campaign{
-		Campaign: dom.Campaign{
-			UserId:            claims.UserId,
-			Name:              input.Name,
-			CaptchaType:       input.CaptchaType,
-			BackgroundImages:  input.BackgroundImages,
-			WordBank:          input.WordBank,
-			CaptchaCount:      input.CaptchaCount,
-			Type:              dom.CampaignTypeUser,
-			Status:            dom.StatusPending,
-		},
-	}
-	if err = tx.Create(&campaign).Error; err != nil {
-		return util.BuildError("1007", "创建 Campaign 失败")
-	}
-
 	order := model.Order{
 		Order: dom.Order{
 			UserId:         claims.UserId,
-			CurrencyId:     input.CurrencyId,
-			Amount:         input.Amount,
-			DeductedAmount: input.DeductedAmount,
+			CurrencyId:     campaign.Product.CurrencyId,
+			Amount:         amount,
+			DeductedAmount: 0,
 			FinalAmount:    finalAmount,
 			OrderNo:        orderNo,
 			Status:         dom.StatusPending,
-			ReasonType:     input.ReasonType,
+			ReasonType:     "Campaign",
 			ReasonId:       campaign.Id,
 		},
 	}
@@ -95,7 +69,6 @@ func CreateOrder(c echo.Context) (err error) {
 	tx.DbCommit()
 
 	db.MysqlDB.Preload("Currency").First(&order, order.Id)
-	db.MysqlDB.First(&campaign, campaign.Id)
 
 	response := util.SuccessResponse()
 	response.Body = map[string]any{
@@ -123,7 +96,7 @@ func GetMyOrderList(c echo.Context) (err error) {
 func GetMyOrder(c echo.Context) (err error) {
 	claims, _ := base.GetClaim(c)
 	var order model.Order
-	if err = db.MysqlDB.Preload("Currency").Preload("Incomes").
+	if err = db.MysqlDB.Preload("Currency").Preload("Incomes").Preload("Refunds").
 		Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&order).Error; err != nil {
 		return util.BuildError("1003", "订单不存在")

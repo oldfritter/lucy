@@ -87,7 +87,7 @@ func init() {
 // fillCampaignCaptchas 扫描未足额的投放并补充生成验证码
 func fillCampaignCaptchas() {
 	var campaigns []model.Campaign
-	if err := db.MysqlDB.Where("status IN (1)").Find(&campaigns).Error; err != nil {
+	if err := db.MysqlDB.Preload("Product").Where("status IN (1)").Find(&campaigns).Error; err != nil {
 		log.Printf("[fill-campaign] query campaigns failed: %v", err)
 		return
 	}
@@ -155,10 +155,10 @@ func markCompleted(campaign *model.Campaign) {
 func generateOne(campaign *model.Campaign) error {
 	prompts := pickPrompts(campaign)
 	if len(prompts) == 0 {
-		prompts = pickSysPrompts(campaign.CaptchaType)
+		prompts = pickSysPrompts(campaign.Product.CaptchaType)
 	}
 
-	switch campaign.CaptchaType {
+	switch campaign.Product.CaptchaType {
 	case "image:rotate":
 		return createRotateCaptcha(campaign)
 	case "text:5":
@@ -178,7 +178,7 @@ func pickPrompts(campaign *model.Campaign) []string {
 	if campaign.WordBank == "" {
 		return nil
 	}
-	want := promptCount(campaign.CaptchaType)
+	want := promptCount(campaign.Product.CaptchaType)
 	phrases := strings.FieldsFunc(campaign.WordBank, func(r rune) bool {
 		return r == '，' || r == ','
 	})
@@ -255,7 +255,7 @@ func createText6Captcha(campaign *model.Campaign, prompts []string) error {
 func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) error {
 	if len(prompts) < count {
 		// 用系统字库补齐
-		sys := pickSysPrompts(campaign.CaptchaType)
+		sys := pickSysPrompts(campaign.Product.CaptchaType)
 		for len(prompts) < count && len(sys) > 0 {
 			prompts = append(prompts, sys[0])
 			sys = sys[1:]

@@ -10,7 +10,8 @@ import (
 type Campaign struct {
 	dom.Campaign
 
-	User *User `gorm:"foreignKey:UserId" json:",omitempty"`
+	User    *User    `gorm:"foreignKey:UserId" json:",omitempty"`
+	Product *Product `gorm:"foreignKey:ProductId" json:",omitempty"`
 }
 
 func (c *Campaign) QueryParams(p map[string]string) map[string][]any {
@@ -24,8 +25,8 @@ func (c *Campaign) QueryParams(p map[string]string) map[string][]any {
 	if p["Status"] != "" {
 		params["status"] = []any{"=", p["Status"]}
 	}
-	if p["CaptchaType"] != "" {
-		params["captcha_type"] = []any{"=", p["CaptchaType"]}
+	if p["ProductId"] != "" {
+		params["product_id"] = []any{"=", p["ProductId"]}
 	}
 	return params
 }

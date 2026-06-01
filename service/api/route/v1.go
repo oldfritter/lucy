@@ -72,6 +72,12 @@ func SetV1Interface(e *echo.Echo) {
 			orderGroup.GET("/:id", v1.GetMyOrder)
 		}
 
+		productGroup := authGroup.Group("/product")
+		{
+			productGroup.GET("/list", v1.GetProductList)
+			productGroup.GET("/:id", v1.GetProduct)
+		}
+
 		// 支付宝 / 微信支付（需要认证）
 		setAlipayAuthRoutes(authGroup)
 		setWechatAuthRoutes(authGroup)

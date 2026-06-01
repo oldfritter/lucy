@@ -10,11 +10,10 @@ import (
 	"github.com/oldfritter/lucy/util"
 )
 
-// GetCampaignList 投放列表（分页）
-func GetCampaignList(c echo.Context) (err error) {
+func GetProductList(c echo.Context) (err error) {
 	var (
-		campaign model.Campaign
-		body     = util.ArrayResponse()
+		product model.Product
+		body    = util.ArrayResponse()
 	)
 	if err := c.Bind(&body.Params); err != nil {
 		return util.BuildError("1001")
@@ -22,75 +21,68 @@ func GetCampaignList(c echo.Context) (err error) {
 	if err := c.Bind(body.Pagination); err != nil {
 		return util.BuildError("1001")
 	}
-	campaign.GetWithPaginate(db.MysqlDB, &body)
+	product.GetWithPaginate(db.MysqlDB, &body)
 	return c.JSON(http.StatusOK, &body)
 }
 
-// GetCampaign 获取单条投放详情
-func GetCampaign(c echo.Context) (err error) {
-	var campaign model.Campaign
+func GetProduct(c echo.Context) (err error) {
+	var product model.Product
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
-		Preload("User").
-		Preload("Product").
-		First(&campaign).Error; err != nil {
+		Preload("Currency").
+		First(&product).Error; err != nil {
 		return util.BuildError("1003")
 	}
 	response := util.SuccessResponse()
-	response.Body = campaign
+	response.Body = product
 	return c.JSON(http.StatusOK, response)
 }
 
-// CreateCampaign 创建投放
-func CreateCampaign(c echo.Context) (err error) {
-	var campaign model.Campaign
-	if err = c.Bind(&campaign); err != nil {
+func CreateProduct(c echo.Context) (err error) {
+	var product model.Product
+	if err = c.Bind(&product); err != nil {
 		return util.BuildError("1001")
 	}
-	if err = c.Validate(&campaign); err != nil {
+	if err = c.Validate(&product); err != nil {
 		return util.BuildError("1002")
 	}
 	tx := db.BeginTx()
 	defer tx.DbRollback()
-	if tx.Create(&campaign).Error != nil {
+	if tx.Create(&product).Error != nil {
 		return util.BuildError("1007")
 	}
 	tx.DbCommit()
-	db.MysqlDB.Preload("Product").First(&campaign, campaign.Id)
 	response := util.SuccessResponse()
-	response.Body = campaign
+	response.Body = product
 	return c.JSON(http.StatusOK, response)
 }
 
-// UpdateCampaign 更新投放
-func UpdateCampaign(c echo.Context) (err error) {
-	var campaign model.Campaign
+func UpdateProduct(c echo.Context) (err error) {
+	var product model.Product
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
-		First(&campaign).Error; err != nil {
+		First(&product).Error; err != nil {
 		return util.BuildError("1003")
 	}
-	if err = c.Bind(&campaign); err != nil {
+	if err = c.Bind(&product); err != nil {
 		return util.BuildError("1001")
 	}
-	if err = c.Validate(&campaign); err != nil {
+	if err = c.Validate(&product); err != nil {
 		return util.BuildError("1002")
 	}
-	db.MysqlDB.Save(&campaign)
-	db.MysqlDB.Preload("Product").First(&campaign, campaign.Id)
+	db.MysqlDB.Save(&product)
 	response := util.SuccessResponse()
-	response.Body = campaign
+	response.Body = product
 	return c.JSON(http.StatusOK, response)
 }
 
-// DeleteCampaign 删除投放
-func DeleteCampaign(c echo.Context) (err error) {
-	var campaign model.Campaign
+func DeleteProduct(c echo.Context) (err error) {
+	var product model.Product
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
-		First(&campaign).Error; err != nil {
+		First(&product).Error; err != nil {
 		return util.BuildError("1003")
 	}
 	tx := db.BeginTx()
 	defer tx.DbRollback()
-	tx.Delete(&campaign)
+	tx.Delete(&product)
 	tx.DbCommit()
 	response := util.SuccessResponse()
 	return c.JSON(http.StatusOK, response)

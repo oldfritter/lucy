@@ -87,4 +87,14 @@ func SetV1Interface(e *echo.Echo) {
 		campaignGroup.DELETE("/:id", v1.DeleteCampaign)
 	}
 
+	productGroup := adminGroup.Group("/product")
+	{
+		productGroup.GET("/list", v1.GetProductList)
+		productGroup.GET("/:id", v1.GetProduct)
+		productGroup.POST("", v1.CreateProduct)
+		productGroup.POST("/", v1.CreateProduct)
+		productGroup.PUT("/:id", v1.UpdateProduct)
+		productGroup.DELETE("/:id", v1.DeleteProduct)
+	}
+
 }

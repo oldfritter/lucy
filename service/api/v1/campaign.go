@@ -34,7 +34,7 @@ func GetMyCampaignList(c echo.Context) (err error) {
 func GetMyCampaign(c echo.Context) (err error) {
 	claims, _ := base.GetClaim(c)
 	var campaign model.Campaign
-	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
+	if err = db.MysqlDB.Preload("Product").Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&campaign).Error; err != nil {
 		return util.BuildError("1003")
 	}
@@ -43,20 +43,45 @@ func GetMyCampaign(c echo.Context) (err error) {
 	return c.JSON(http.StatusOK, response)
 }
 
-// CreateMyCampaign 创建投放（Status 由系统控制，固定为 0-待处理）
+// CreateMyCampaign 创建投放（ProductId 指定关联商品，验证码类型取自商品）
 func CreateMyCampaign(c echo.Context) (err error) {
 	claims, _ := base.GetClaim(c)
-	var campaign model.Campaign
-	if err = c.Bind(&campaign); err != nil {
+
+	var input struct {
+		ProductId        int    `form:"ProductId" validate:"required"`
+		Name             string `form:"Name" validate:"required,max=64"`
+		BackgroundImages string `form:"BackgroundImages"`
+		WordBank         string `form:"WordBank"`
+		CaptchaCount     int    `form:"CaptchaCount" validate:"omitempty,min=1"`
+	}
+	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
 	}
-
-	// 系统控制：UserId 取自当前登录用户，Status 固定为待处理
-	campaign.UserId = claims.UserId
-	campaign.Status = dom.StatusPending
-
-	if err = c.Validate(&campaign); err != nil {
+	if err = c.Validate(&input); err != nil {
 		return util.BuildError("1002", err.Error())
+	}
+
+	// 验证关联商品存在
+	var product model.Product
+	if err = db.MysqlDB.First(&product, input.ProductId).Error; err != nil {
+		return util.BuildError("1003", "商品不存在")
+	}
+
+	if input.CaptchaCount == 0 {
+		input.CaptchaCount = product.CaptchaCount
+	}
+
+	campaign := model.Campaign{
+		Campaign: dom.Campaign{
+			UserId:           claims.UserId,
+			ProductId:        input.ProductId,
+			Name:             input.Name,
+			BackgroundImages: input.BackgroundImages,
+			WordBank:         input.WordBank,
+			CaptchaCount:     input.CaptchaCount,
+			Type:             dom.CampaignTypeUser,
+			Status:           dom.StatusPending,
+		},
 	}
 
 	tx := db.BeginTx()
@@ -65,6 +90,7 @@ func CreateMyCampaign(c echo.Context) (err error) {
 		return util.BuildError("1007")
 	}
 	tx.DbCommit()
+	db.MysqlDB.Preload("Product").First(&campaign, campaign.Id)
 	response := util.SuccessResponse()
 	response.Body = campaign
 	return c.JSON(http.StatusOK, response)
@@ -81,11 +107,10 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 
 	// 只绑定用户可修改的字段，不绑定 Status
 	var input struct {
-		Name              string `form:"Name" validate:"max=64"`
-		CaptchaType       string `form:"CaptchaType"`
-		BackgroundImages  string `form:"BackgroundImages"`
-		WordBank          string `form:"WordBank"`
-		CaptchaCount      int    `form:"CaptchaCount" validate:"omitempty,min=1"`
+		Name             string `form:"Name" validate:"max=64"`
+		BackgroundImages string `form:"BackgroundImages"`
+		WordBank         string `form:"WordBank"`
+		CaptchaCount     int    `form:"CaptchaCount" validate:"omitempty,min=1"`
 	}
 	if err = c.Bind(&input); err != nil {
 		return util.BuildError("1001")
@@ -94,9 +119,6 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 	updates := map[string]any{}
 	if input.Name != "" {
 		updates["name"] = input.Name
-	}
-	if input.CaptchaType != "" {
-		updates["captcha_type"] = input.CaptchaType
 	}
 	if input.BackgroundImages != "" {
 		updates["background_images"] = input.BackgroundImages
@@ -109,7 +131,7 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 	}
 	if len(updates) > 0 {
 		db.MysqlDB.Model(&campaign).Updates(updates)
-		db.MysqlDB.First(&campaign, campaign.Id)
+		db.MysqlDB.Preload("Product").First(&campaign, campaign.Id)
 	}
 
 	response := util.SuccessResponse()
