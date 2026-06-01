@@ -30,7 +30,8 @@ func init() {
 		}
 		f, err := freetype.ParseFont(fontBytes)
 		if err != nil {
-			log.Fatalf("Error parsing font: %v", err)
+			log.Printf("跳过字体 %s: %v", fileInfo.Name(), err)
+			continue
 		}
 		captcha.Fonts = append(captcha.Fonts, f)
 	}

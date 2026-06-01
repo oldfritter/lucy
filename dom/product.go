@@ -3,6 +3,8 @@ package dom
 // Product 商品：定义投放类型 + 数量对应的定价
 type Product struct {
 	CommonModel
+	Title          string `gorm:"size:32" form:"Title" validate:"required"`                     // 商品名称
+	Description    string `gorm:"size:1024" form:"Description" validate:"required"`             // 商品简介
 	CaptchaType    string `gorm:"size:16" form:"CaptchaType" validate:"required"`               // 投放类型：text:4 / text:5 / text:6 / image:rotate
 	CaptchaCount   int    `gorm:"default:1" form:"CaptchaCount" validate:"required,min=1"`      // 投放验证码数量
 	CurrencyId     int    `form:"CurrencyId" validate:"required"`                               // 币种 ID
@@ -13,8 +15,8 @@ type Product struct {
 func (*Product) TableName() string { return "product" }
 
 const (
-	ProductCaptchaTypeText4     = "text:4"
-	ProductCaptchaTypeText5     = "text:5"
-	ProductCaptchaTypeText6     = "text:6"
-	ProductCaptchaTypeRotateImg = "image:rotate"
+	ProductCaptchaTypeText4       = "text:4"
+	ProductCaptchaTypeText5       = "text:5"
+	ProductCaptchaTypeText6       = "text:6"
+	ProductCaptchaTypeImageRotate = "image:rotate"
 )
