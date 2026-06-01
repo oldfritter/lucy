@@ -2,14 +2,9 @@ package oss
 
 import (
 	"bytes"
-	// "encoding/json"
 	"fmt"
 	"log"
-	// "os"
-	// "regexp"
 
-	// "github.com/aliyun/alibaba-cloud-sdk-go/sdk"
-	// "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 
 	"github.com/oldfritter/lucy/base"

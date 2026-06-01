@@ -1,10 +1,7 @@
 package kv
 
 import (
-	// "context"
-	// "errors"
 	"log"
-	// "os"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
