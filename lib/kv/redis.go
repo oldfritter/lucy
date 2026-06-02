@@ -46,24 +46,34 @@ func newRedisPool(redisName string) *redis.Pool {
 		MaxConnLifetime: maxConnLifetime,
 		Wait:            true,
 		Dial: func() (redis.Conn, error) {
+			log.Printf("redis %s connecting to %s (db=%s, hasPassword=%v)...", redisName, server, db, password != "")
 			conn, err := redis.Dial(network, server)
 			if err != nil {
-				log.Println("redis can't dial:" + err.Error())
+				log.Printf("redis can't dial (%s): %v", server, err)
 				return nil, err
 			}
 
-			if username != "" && password != "" {
-				if _, err := conn.Do("AUTH", username, password); err != nil {
-					log.Println("redis can't AUTH:" + err.Error())
-					conn.Close()
-					return nil, err
+			if password != "" {
+				if username != "" {
+					if _, err := conn.Do("AUTH", username, password); err != nil {
+						log.Printf("redis can't AUTH (user=%s): %v", username, err)
+						conn.Close()
+						return nil, err
+					}
+				} else {
+					if _, err := conn.Do("AUTH", password); err != nil {
+						log.Printf("redis can't AUTH: %v", err)
+						conn.Close()
+						return nil, err
+					}
 				}
+				log.Printf("redis %s AUTH OK", redisName)
 			}
 
 			if db != "" {
 				_, err := conn.Do("SELECT", db)
 				if err != nil {
-					log.Println("redis can't SELECT:" + err.Error())
+					log.Printf("redis can't SELECT (db=%s): %v", db, err)
 					conn.Close()
 					return nil, err
 				}

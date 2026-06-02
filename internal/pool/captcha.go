@@ -97,3 +97,22 @@ func PoolSize(captchaType string) (int, error) {
 	defer conn.Close()
 	return redis.Int(conn.Do("SCARD", poolKey(captchaType)))
 }
+// IsInVerifiedPool 检查 uid 是否已经被验证过（存在于任一类型的 success 或 failed 池中）
+func IsInVerifiedPool(uid string) (bool, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	types := []string{"text:4", "text:5", "text:6", "image:rotate"}
+	for _, t := range types {
+		for _, kind := range []string{"success", "failed"} {
+			key := base.RedisNamespace + ":captcha:verified:" + kind + ":" + t
+			n, err := redis.Int(conn.Do("SISMEMBER", key, uid))
+			if err != nil {
+				return false, err
+			}
+			if n > 0 {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}

@@ -52,7 +52,6 @@ func (captcha *CaptchaText4) AfterDelete(tx *gorm.DB) error {
 
 func (captcha *CaptchaText4) Json() string {
 	b, _ := json.Marshal(map[string]any{
-		"uid":        captcha.Uid,
 		"valid_code": captcha.ValidCode,
 		"key":        captcha.Key,
 

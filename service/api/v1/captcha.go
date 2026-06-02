@@ -169,7 +169,6 @@ func FetchCaptcha(c echo.Context) (err error) {
 	}
 
 	var capData struct {
-		Uid       string `json:"uid"`
 		ValidCode string `json:"valid_code"`
 		Key       string `json:"key"`
 	}
@@ -186,7 +185,7 @@ func FetchCaptcha(c echo.Context) (err error) {
 	}
 
 	respBody := map[string]string{
-		"uid":        capData.Uid,
+		"uid":        uid,
 		"valid_code": capData.ValidCode,
 		"url":        imageUrl,
 	}

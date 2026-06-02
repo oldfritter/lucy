@@ -1,4 +1,6 @@
 FROM golang:1.25.4 AS builder
+ENV GO111MODULE=on
+ENV GOPROXY=https://goproxy.cn
 COPY . /app
 RUN cd /app && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/api service/api/main.go
 
