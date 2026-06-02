@@ -10,5 +10,6 @@ LABEL cn.oldfritter.image.authors="leon@oldfritter.cn"
 WORKDIR /app
 COPY config/locale /app/config/locale
 COPY config/ttf /app/config/ttf
+COPY public /app/public
 COPY --from=builder /app/cmd/api /app/cmd/api
 ENTRYPOINT /app/cmd/api

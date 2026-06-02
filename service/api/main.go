@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -48,6 +49,17 @@ func main() {
 	e.HideBanner = true
 
 	route.SetV1Interface(e)
+
+	// 静态文件服务
+	e.GET("/", func(c echo.Context) error {
+		return c.Redirect(http.StatusFound, "/app")
+	})
+	e.File("/app", "public/index.html")
+	app := e.Group("/app")
+	app.Static("/assets", "public/assets")
+	app.GET("/*", func(c echo.Context) error {
+		return c.File("public/index.html")
+	})
 
 	var err error
 	go func() {

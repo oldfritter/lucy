@@ -26,4 +26,5 @@ logs/*.log
 log/*.log
 pids/*.pid
 pid/*.pid
+public/
 .idea/
