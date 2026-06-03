@@ -207,6 +207,13 @@ func FetchCaptcha(c echo.Context) (err error) {
 		"valid_code": capData.ValidCode,
 		"url":        imageUrl,
 	}
+	// 图片尺寸（用于前端坐标换算）
+	if w, ok := rawData["width"].(float64); ok {
+		respBody["width"] = int(w)
+	}
+	if h, ok := rawData["height"].(float64); ok {
+		respBody["height"] = int(h)
+	}
 	if len(texts) > 0 {
 		respBody["texts"] = texts
 	}

@@ -103,20 +103,9 @@ func CreateTextImage(text string) image.Image {
 	return img
 }
 
-// charRect 表示一个已放置字符的边界矩形（含间距）
-type charRect struct {
-	MinX, MinY, MaxX, MaxY int
-}
-
-// overlaps 检查两个矩形是否重叠
-func (r charRect) overlaps(other charRect) bool {
-	return r.MinX < other.MaxX && r.MaxX > other.MinX &&
-		r.MinY < other.MaxY && r.MaxY > other.MinY
-}
-
-// GenerateTextChallenge 将一组字符随机散布（含随机旋转 ±60°）在透明背景上，返回图片及各字符的中心坐标
+// GenerateTextChallenge 将一组字符分列网格放置（含随机旋转 ±60°），返回图片及各字符的中心坐标
 func GenerateTextChallenge(chars []string) (image.Image, []image.Point) {
-	fontSize := 30.0
+	fontSize := 60.0
 	fontSizeInt := int(fontSize)
 	padding := 20
 
@@ -135,46 +124,26 @@ func GenerateTextChallenge(chars []string) (image.Image, []image.Point) {
 	yMax := h - padding - expansion
 
 	var points []image.Point
-	var placed []charRect
-	const maxRetries = 50
 
 	// 单字临时画布尺寸（按实际渲染字号，足够容纳旋转后的字形）
 	charSz := fontSizeInt * 3
 
-	for _, ch := range chars {
-		var x, y int
-		var angleDeg float64
-		for retry := 0; retry < maxRetries; retry++ {
-			x = padding + rand.Intn(xMax-padding)
-			y = yMin + rand.Intn(yMax-yMin)
-			angleDeg = rand.Float64()*120 - 60 // [-60, 60]
+	// 网格布局：将画布等分为 n 列，每列中心放一个字，可在列内随机偏移
+	colW := (xMax - padding) / n
+	colH := yMax - yMin
+	colJitterX := max(colW/2-charSz/2, 0)
+	colJitterY := max(colH/2-charSz/2, 0)
 
-			candidate := charRect{
-				MinX: x - expansion,
-				MaxX: x + expansion,
-				MinY: y - expansion,
-				MaxY: y + expansion,
-			}
+	for i, ch := range chars {
+		colCenterX := padding + colW*i + colW/2
+		colCenterY := yMin + colH/2
 
-			overlap := false
-			for _, p := range placed {
-				if candidate.overlaps(p) {
-					overlap = true
-					break
-				}
-			}
-			if !overlap {
-				break
-			}
-		}
+		x := colCenterX + rand.Intn(colJitterX*2+1) - colJitterX
+		y := colCenterY + rand.Intn(colJitterY*2+1) - colJitterY
+
+		angleDeg := rand.Float64()*120 - 60 // [-60, 60]
 
 		points = append(points, image.Point{X: x, Y: y})
-		placed = append(placed, charRect{
-			MinX: x - expansion,
-			MaxX: x + expansion,
-			MinY: y - expansion,
-			MaxY: y + expansion,
-		})
 
 		// 创建单字图片（透明背景），居中绘制
 		charImg := image.NewRGBA(image.Rect(0, 0, charSz, charSz))

@@ -25,6 +25,8 @@ type Captcha struct {
 	Uid          string `gorm:"size:32;uniqueIndex" query:"Uid"`                 // 唯一识别名
 	ValidCode    string `gorm:"size:64"`                                         // 验证令牌，客户端持有 Uid+ValidCode 即可验证
 	Key          string `gorm:"size:64" query:"Key"`                             // 存储图片的 OSS 路径
+	Width        int    `gorm:"default:0"`                                       // 图片宽度（px）
+	Height       int    `gorm:"default:0"`                                       // 图片高度（px）
 	Suffix       string `gorm:"size:8;default:png" form:"Suffix" query:"Suffix"` // 后缀
 }
 

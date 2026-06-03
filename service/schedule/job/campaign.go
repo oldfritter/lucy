@@ -273,6 +273,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 
 	// 生成挑战图 + 获取各字位点
 	img, points := captchaImage.GenerateTextChallenge(prompts)
+	imgW, imgH := img.Bounds().Dx(), img.Bounds().Dy()
 
 	// 先创建 DB 记录触发 BeforeCreate（生成 Key、Captcha）
 	var c model.CaptchaText4
@@ -283,6 +284,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		cc.UserId = campaign.UserId
 		cc.CampaignId = &campaign.Id
+		cc.Width, cc.Height = imgW, imgH
 		tx := db.BeginTx()
 		defer tx.DbRollback()
 		if err := tx.Create(&cc).Error; err != nil {
@@ -305,6 +307,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		}
 		cc.UserId = campaign.UserId
 		cc.CampaignId = &campaign.Id
+		cc.Width, cc.Height = imgW, imgH
 		tx := db.BeginTx()
 		defer tx.DbRollback()
 		if err := tx.Create(&cc).Error; err != nil {
@@ -328,6 +331,7 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 	}
 	c.UserId = campaign.UserId
 	c.CampaignId = &campaign.Id
+	c.Width, c.Height = imgW, imgH
 
 	tx := db.BeginTx()
 	defer tx.DbRollback()
@@ -395,6 +399,7 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	}
 	c.UserId = campaign.UserId
 	c.CampaignId = &campaign.Id
+	c.Width, c.Height = 300, 300
 
 	c.Angle = float64(randInt(30, 330))
 	// 让角度偏离竖直方向一定程度
