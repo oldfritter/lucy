@@ -99,15 +99,17 @@ func fillCampaignCaptchas() {
 	log.Printf("[fill-campaign] scanning %d active campaign(s)", len(campaigns))
 
 	for _, campaign := range campaigns {
-		// 统计已生成数量
-		count := countCaptchasByCampaign(campaign.Id)
+		// 统计待用数量（系统投放用 campaign 池大小，用户投放用 DB 计数）
+		var available int64
+		if campaign.Type == dom.CampaignTypeSystem {
+			available, _ = pool.CampaignPoolSize(campaign.Id)
+		} else {
+			available = countCaptchasByCampaign(campaign.Id)
+		}
 
-		needed := campaign.CaptchaCount - int(count)
+		needed := campaign.CaptchaCount - int(available)
 		if needed <= 0 {
-			// 用户投放达上限 → 标记完成；系统投放跳过本轮（池中有足够待用验证码）
-			if campaign.Type == dom.CampaignTypeUser {
-				markCompleted(&campaign)
-			}
+			// 系统投放池中有足够待用验证码 → 跳过本轮
 			continue
 		}
 
@@ -137,8 +139,12 @@ func fillCampaignCaptchas() {
 		log.Printf("[fill-campaign] campaign=%d created=%d", campaign.Id, created)
 
 		// 重新统计
-		count = countCaptchasByCampaign(campaign.Id)
-		if int(count) >= campaign.CaptchaCount {
+		if campaign.Type == dom.CampaignTypeSystem {
+			available, _ = pool.CampaignPoolSize(campaign.Id)
+		} else {
+			available = countCaptchasByCampaign(campaign.Id)
+		}
+		if int(available) >= campaign.CaptchaCount {
 			if campaign.Type == dom.CampaignTypeUser {
 				markCompleted(&campaign)
 			}
@@ -289,6 +295,9 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		tx.Save(&cc)
 		tx.DbCommit()
 		pool.AddToPool("text:5", cc.Uid)
+		if campaign.Type == dom.CampaignTypeSystem {
+			pool.AddToCampaignPool(campaign.Id, cc.Uid)
+		}
 		return nil
 	case 6:
 		cc := model.CaptchaText6{
@@ -308,6 +317,9 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		tx.Save(&cc)
 		tx.DbCommit()
 		pool.AddToPool("text:6", cc.Uid)
+		if campaign.Type == dom.CampaignTypeSystem {
+			pool.AddToCampaignPool(campaign.Id, cc.Uid)
+		}
 		return nil
 	default:
 		c = model.CaptchaText4{
@@ -329,6 +341,9 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 	tx.Save(&c)
 	tx.DbCommit()
 	pool.AddToPool("text:4", c.Uid)
+	if campaign.Type == dom.CampaignTypeSystem {
+		pool.AddToCampaignPool(campaign.Id, c.Uid)
+	}
 	return nil
 }
 
@@ -393,6 +408,9 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	c.Create()
 	tx.DbCommit()
 	pool.AddToPool("image:rotate", c.Uid)
+	if campaign.Type == dom.CampaignTypeSystem {
+		pool.AddToCampaignPool(campaign.Id, c.Uid)
+	}
 	return nil
 }
 

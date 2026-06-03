@@ -1,6 +1,8 @@
 package pool
 
 import (
+	"fmt"
+
 	"github.com/gomodule/redigo/redis"
 
 	"github.com/oldfritter/lucy/base"
@@ -97,6 +99,36 @@ func PoolSize(captchaType string) (int, error) {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
 	return redis.Int(conn.Do("SCARD", poolKey(captchaType)))
+}
+
+
+// ── 各 system 类型 campaign 的独立待用验证码池 ──
+
+func campaignPoolKey(campaignId int) string {
+	return base.RedisNamespace + ":captcha:campaign:pool:" + fmt.Sprint(campaignId)
+}
+
+// AddToCampaignPool 将 uid 加入 campaign 的待用验证码池
+func AddToCampaignPool(campaignId int, uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	_, err := conn.Do("SADD", campaignPoolKey(campaignId), uid)
+	return err
+}
+
+// RemoveFromCampaignPool 将 uid 从 campaign 的待用验证码池中移除
+func RemoveFromCampaignPool(campaignId int, uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	_, err := conn.Do("SREM", campaignPoolKey(campaignId), uid)
+	return err
+}
+
+// CampaignPoolSize 返回 campaign 待用验证码池中的存量
+func CampaignPoolSize(campaignId int) (int64, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	return redis.Int64(conn.Do("SCARD", campaignPoolKey(campaignId)))
 }
 
 // IsInVerifiedPool 检查 uid 是否已经被验证过（存在于任一类型的 success 或 failed 池中）

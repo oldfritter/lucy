@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -16,8 +17,8 @@ import (
 )
 
 type verifyPoint struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type verifyRequest struct {
@@ -37,23 +38,23 @@ func VerifyCaptcha(c echo.Context) (err error) {
 		return util.BuildError("1001")
 	}
 
-	// 从池中捞取，确保只能消费一次
-	removed, err := pool.RemoveFromPool(uid)
-	if err != nil || !removed {
-		return util.BuildError("1008")
-	}
+	// // 从池中捞取，确保只能消费一次
+	// removed, err := pool.RemoveFromPool(uid)
+	// if err != nil || !removed {
+	//   return util.BuildError("1008")
+	// }
 
 	// 根据请求字段判断类型
 	if req.Angle != nil {
 		return verifyRotateByUid(c, uid, req)
 	}
 	if len(req.Points) >= 4 && len(req.Points) <= 6 {
-		return verifyTextImageByUid(c, uid, req)
+		return verifyTextByUid(c, uid, req)
 	}
 	return util.BuildError("1001")
 }
 
-func verifyTextImageByUid(c echo.Context, uid string, req verifyRequest) error {
+func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 	switch len(req.Points) {
 	case 4:
 		var captcha model.CaptchaText4
@@ -120,7 +121,7 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 func pointsToInts(input []verifyPoint) [][]int {
 	points := make([][]int, len(input))
 	for i, p := range input {
-		points[i] = []int{p.X, p.Y}
+		points[i] = []int{int(math.Round(p.X)), int(math.Round(p.Y))}
 	}
 	return points
 }
@@ -187,6 +188,11 @@ func FetchCaptcha(c echo.Context) (err error) {
 		} else {
 			break
 		}
+	}
+
+	// 如果验证码属于某个 system campaign，从 campaign 待用池中移除
+	if campaignID, ok := rawData["campaign_id"].(float64); ok {
+		pool.RemoveFromCampaignPool(int(campaignID), uid)
 	}
 
 	// 生成带签名的临时下载链接

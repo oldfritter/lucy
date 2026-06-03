@@ -60,6 +60,7 @@ func (captcha *CaptchaText6) Json() string {
 	b, _ := json.Marshal(map[string]any{
 		"valid_code": captcha.ValidCode,
 		"key":        captcha.Key,
+		"campaign_id": captcha.CampaignId,
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,

@@ -47,6 +47,7 @@ func (captcha *CaptchaImageRotate) Json() string {
 	b, _ := json.Marshal(map[string]any{
 		"valid_code": captcha.ValidCode,
 		"key":        captcha.Key,
+		"campaign_id": captcha.CampaignId,
 		"angle":      captcha.Angle,
 	})
 	return string(b)
