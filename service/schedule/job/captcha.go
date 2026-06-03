@@ -18,7 +18,7 @@ func init() {
 	})
 	Register(Job{
 		Name: "sync-captcha-cache",
-		Spec: "@every 2m",
+		Spec: "0 0 1 * * *",
 		Func: syncCaptchaCache,
 	})
 }
@@ -67,7 +67,7 @@ func batchUpdateCaptchaStatus() {
 	}
 }
 
-// syncCaptchaCache 每 10 分钟将数据库中未被使用（status=1）的验证码重新写入 Redis 缓存，
+// syncCaptchaCache 在 batchUpdateCaptchaStatus 执行后 1 小时（凌晨 1 点）将数据库中未被使用（status=1）的验证码重新写入 Redis 缓存，
 // 防止因缓存过期或重启导致池中验证码无法被 FetchCaptcha 获取。
 func syncCaptchaCache() {
 	// 四张验证码表，各自查询 status=1 的记录，跳过已验证的 uid
