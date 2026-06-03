@@ -16,12 +16,13 @@ import (
 )
 
 type registerRequest struct {
-	Username string `form:"Username" validate:"required,max=32"`
-	Password string `form:"Password" validate:"required,max=32"`
-	Nickname string `form:"Nickname" validate:"max=32"`
-	Email    string `form:"Email" validate:"email"`
-	Phone    string `form:"Phone"`
-	Gender   string `form:"Gender" validate:"oneof=f m"`
+	Username   string `form:"Username" validate:"required,max=32"`
+	Password   string `form:"Password" validate:"required,max=32"`
+	Nickname   string `form:"Nickname" validate:"max=32"`
+	Email      string `form:"Email" validate:"email"`
+	Phone      string `form:"Phone"`
+	Gender     string `form:"Gender" validate:"oneof=f m"`
+	InviteCode string `form:"InviteCode" validate:"max=16"`
 }
 
 type loginRequest struct {
@@ -75,14 +76,25 @@ func Register(c echo.Context) (err error) {
 		return util.BuildError("1007", "用户名已存在")
 	}
 
+	// 如果提供了邀请码，查找邀请人
+	var inviterId int
+	if req.InviteCode != "" {
+		var inviter model.User
+		if err := db.MysqlDB.Where("invite_code = ?", req.InviteCode).First(&inviter).Error; err != nil {
+			return util.BuildError("1003", "邀请码无效")
+		}
+		inviterId = inviter.Id
+	}
+
 	user := model.User{
 		User: dom.User{
-			Username: req.Username,
-			Password: req.Password,
-			Nickname: req.Nickname,
-			Email:    req.Email,
-			Phone:    req.Phone,
-			Gender:   req.Gender,
+			Username:  req.Username,
+			Password:  req.Password,
+			Nickname:  req.Nickname,
+			Email:     req.Email,
+			Phone:     req.Phone,
+			Gender:    req.Gender,
+			InviterId: inviterId,
 		},
 	}
 

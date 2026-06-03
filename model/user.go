@@ -12,6 +12,7 @@ type User struct {
 
 	Accounts    []*Account    `gorm:"foreignKey:UserId" json:",omitempty"`
 	UserApiKeys []*UserApiKey `gorm:"foreignKey:UserId" json:",omitempty"`
+	Inviter     *User         `gorm:"foreignKey:InviterId" json:",omitempty"`
 }
 
 func (user *User) QueryParams(p map[string]string) map[string][]any {
