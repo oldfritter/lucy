@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	cacheKeyPrefix = "lucy:captcha:"
+	cacheKeyPrefix = base.RedisNamespace + ":captcha:"
 )
 
 // CaptchaCacher 验证码缓存接口

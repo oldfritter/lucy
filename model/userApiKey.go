@@ -4,13 +4,43 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/oldfritter/lucy/dom"
+	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/util"
 )
 
 type UserApiKey struct {
 	dom.UserApiKey
 
-	User *User `gorm:"foreignKey:UserId" json:",omitempty"`
+	User    *User    `gorm:"foreignKey:UserId" json:",omitempty"`
+	Product *Product `gorm:"foreignKey:ProductId" json:",omitempty"`
+}
+
+func (uak *UserApiKey) AfterCreate(tx *gorm.DB) error {
+	return syncApiKeyCache(uak)
+}
+
+func (uak *UserApiKey) AfterUpdate(tx *gorm.DB) error {
+	return syncApiKeyCache(uak)
+}
+
+func (uak *UserApiKey) AfterDelete(tx *gorm.DB) error {
+	_ = cache.DelApiKeyCache(uak.Key)
+	return nil
+}
+
+func syncApiKeyCache(uak *UserApiKey) error {
+	return cache.SetApiKeyCache(uak.Key, &cache.ApiKeyCache{
+		Secret:      uak.Secret,
+		IsActive:    uak.IsActive,
+		UserId:      uak.UserId,
+		CaptchaType: uak.CaptchaType,
+		PerMinuteLimit: func() int {
+			if uak.Product != nil {
+				return uak.Product.PerMinuteLimit
+			}
+			return 100
+		}(),
+	})
 }
 
 // GenerateKeys 使用密码学安全随机数生成 32 位 Key 与 Secret
@@ -36,9 +66,7 @@ func (uak *UserApiKey) QueryParams(p map[string]string) map[string][]any {
 	if p["UserId"] != "" {
 		params["user_id"] = []any{"=", p["UserId"]}
 	}
-	if p["Provider"] != "" {
-		params["provider"] = []any{"=", p["Provider"]}
-	}
+
 	if p["CaptchaType"] != "" {
 		params["captcha_type"] = []any{"=", p["CaptchaType"]}
 	}

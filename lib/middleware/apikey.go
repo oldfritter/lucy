@@ -27,7 +27,7 @@ func ApiKeyAuth() echo.MiddlewareFunc {
 				return util.BuildError("1005")
 			}
 
-			c.Set("ApiKey", &cached)
+			c.Set("ApiKey", cached)
 			return next(c)
 		}
 	}

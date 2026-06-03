@@ -7,12 +7,13 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 
+	"github.com/oldfritter/lucy/base"
 	"github.com/oldfritter/lucy/lib/kv"
 )
 
-const rateLimitKeyPrefix = "rate:apikey:"
+const rateLimitKeyPrefix = base.RedisNamespace + ":apikey:rate:"
 
-const apiKeyPrefix = "lucy:apikey:"
+const apiKeyPrefix = base.RedisNamespace + ":apikey:"
 
 // ApiKeyCache API Key 的缓存结构
 type ApiKeyCache struct {

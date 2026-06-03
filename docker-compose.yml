@@ -9,20 +9,20 @@ services:
       - ./log:/app/log
     platform: linux/amd64
 
-  schedule:
-    build:
-      dockerfile: service/schedule/Dockerfile
-    image: registry.cn-heyuan.aliyuncs.com/oldfritter/lucy-schedule
-    volumes:
-      - ./config:/app/config
-      - ./log:/app/log
-    platform: linux/amd64
-
-  worker:
-    build:
-      dockerfile: service/worker/Dockerfile
-    image: registry.cn-heyuan.aliyuncs.com/oldfritter/lucy-worker
-    volumes:
-      - ./config:/app/config
-      - ./log:/app/log
-    platform: linux/amd64
+  # schedule:
+  #   build:
+  #     dockerfile: service/schedule/Dockerfile
+  #   image: registry.cn-heyuan.aliyuncs.com/oldfritter/lucy-schedule
+  #   volumes:
+  #     - ./config:/app/config
+  #     - ./log:/app/log
+  #   platform: linux/amd64
+  #
+  # worker:
+  #   build:
+  #     dockerfile: service/worker/Dockerfile
+  #   image: registry.cn-heyuan.aliyuncs.com/oldfritter/lucy-worker
+  #   volumes:
+  #     - ./config:/app/config
+  #     - ./log:/app/log
+  #   platform: linux/amd64

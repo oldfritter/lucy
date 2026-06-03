@@ -71,7 +71,6 @@ func CreateMyApiKey(c echo.Context) (err error) {
 
 	var input struct {
 		ProductId int    `form:"ProductId" validate:"required"`
-		Provider  string `form:"Provider" validate:"required,max=32"`
 		Name      string `form:"Name" validate:"max=64"`
 	}
 	if err = c.Bind(&input); err != nil {
@@ -89,12 +88,10 @@ func CreateMyApiKey(c echo.Context) (err error) {
 
 	uak := model.UserApiKey{
 		UserApiKey: dom.UserApiKey{
-			UserId:         claims.UserId,
-			ProductId:      input.ProductId,
-			CaptchaType:    product.CaptchaType,
-			PerMinuteLimit: product.PerMinuteLimit,
-			Provider:       input.Provider,
-			Name:           input.Name,
+			UserId:      claims.UserId,
+			ProductId:   input.ProductId,
+			CaptchaType: product.CaptchaType,
+			Name:        input.Name,
 		},
 	}
 	uak.GenerateKeys()

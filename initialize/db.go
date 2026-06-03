@@ -22,7 +22,7 @@ func MigrateDB() {
 
 func loadApiKeysToRedis() error {
 	var keys []model.UserApiKey
-	if err := db.MysqlDB.Where("is_active = ?", true).Find(&keys).Error; err != nil {
+	if err := db.MysqlDB.Where("is_active = ?", true).Preload("Product").Find(&keys).Error; err != nil {
 		return err
 	}
 
@@ -35,6 +35,12 @@ func loadApiKeysToRedis() error {
 			IsActive:    k.IsActive,
 			UserId:      k.UserId,
 			CaptchaType: k.CaptchaType,
+			PerMinuteLimit: func() int {
+				if k.Product != nil {
+					return k.Product.PerMinuteLimit
+				}
+				return 100
+			}(),
 		}
 		data, _ := json.Marshal(c)
 		conn.Do("SET", "lucy:apikey:"+k.Key, string(data))

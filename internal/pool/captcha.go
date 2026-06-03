@@ -69,6 +69,7 @@ func AddToPool(captchaType, uid string) error {
 func PopFromPool(captchaType string) (string, error) {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
+
 	uid, err := redis.String(conn.Do("SPOP", poolKey(captchaType)))
 	if err == redis.ErrNil {
 		return "", nil
@@ -97,6 +98,7 @@ func PoolSize(captchaType string) (int, error) {
 	defer conn.Close()
 	return redis.Int(conn.Do("SCARD", poolKey(captchaType)))
 }
+
 // IsInVerifiedPool 检查 uid 是否已经被验证过（存在于任一类型的 success 或 failed 池中）
 func IsInVerifiedPool(uid string) (bool, error) {
 	conn := kv.GetRedisConn("data")

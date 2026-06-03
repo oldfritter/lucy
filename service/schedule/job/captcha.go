@@ -18,7 +18,7 @@ func init() {
 	})
 	Register(Job{
 		Name: "sync-captcha-cache",
-		Spec: "@every 10m",
+		Spec: "@every 2m",
 		Func: syncCaptchaCache,
 	})
 }
@@ -87,9 +87,13 @@ func syncCaptchaCache() {
 			}
 			if err := cache.SetCaptchaCache(&list4[i]); err != nil {
 				log.Printf("[sync-captcha-cache] text:4 uid=%s cache set failed: %v", list4[i].Uid, err)
-			} else {
-				synced++
+				continue
 			}
+			if err := pool.AddToPool("text:4", list4[i].Uid); err != nil {
+				log.Printf("[sync-captcha-cache] text:4 uid=%s pool add failed: %v", list4[i].Uid, err)
+				continue
+			}
+			synced++
 		}
 		if synced > 0 {
 			log.Printf("[sync-captcha-cache] text:4 synced %d", synced)
@@ -111,9 +115,13 @@ func syncCaptchaCache() {
 			}
 			if err := cache.SetCaptchaCache(&list5[i]); err != nil {
 				log.Printf("[sync-captcha-cache] text:5 uid=%s cache set failed: %v", list5[i].Uid, err)
-			} else {
-				synced++
+				continue
 			}
+			if err := pool.AddToPool("text:5", list5[i].Uid); err != nil {
+				log.Printf("[sync-captcha-cache] text:5 uid=%s pool add failed: %v", list5[i].Uid, err)
+				continue
+			}
+			synced++
 		}
 		if synced > 0 {
 			log.Printf("[sync-captcha-cache] text:5 synced %d", synced)
@@ -135,9 +143,13 @@ func syncCaptchaCache() {
 			}
 			if err := cache.SetCaptchaCache(&list6[i]); err != nil {
 				log.Printf("[sync-captcha-cache] text:6 uid=%s cache set failed: %v", list6[i].Uid, err)
-			} else {
-				synced++
+				continue
 			}
+			if err := pool.AddToPool("text:6", list6[i].Uid); err != nil {
+				log.Printf("[sync-captcha-cache] text:6 uid=%s pool add failed: %v", list6[i].Uid, err)
+				continue
+			}
+			synced++
 		}
 		if synced > 0 {
 			log.Printf("[sync-captcha-cache] text:6 synced %d", synced)
@@ -159,9 +171,13 @@ func syncCaptchaCache() {
 			}
 			if err := cache.SetCaptchaCache(&listR[i]); err != nil {
 				log.Printf("[sync-captcha-cache] image:rotate uid=%s cache set failed: %v", listR[i].Uid, err)
-			} else {
-				synced++
+				continue
 			}
+			if err := pool.AddToPool("image:rotate", listR[i].Uid); err != nil {
+				log.Printf("[sync-captcha-cache] image:rotate uid=%s pool add failed: %v", listR[i].Uid, err)
+				continue
+			}
+			synced++
 		}
 		if synced > 0 {
 			log.Printf("[sync-captcha-cache] image:rotate synced %d", synced)

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -133,8 +134,6 @@ func cacheIdForType(captchaType, uid string) string {
 	return captchaType + ":" + uid
 }
 
-
-
 // FetchCaptcha 使用 ApiKey 中间件认证，从对应类型的池中捞取验证码
 func FetchCaptcha(c echo.Context) (err error) {
 	apiKey := c.Get("ApiKey").(*cache.ApiKeyCache)
@@ -177,6 +176,19 @@ func FetchCaptcha(c echo.Context) (err error) {
 		return util.BuildError("1003")
 	}
 
+	// 解析文字内容（文字类验证码才包含 p1-p6 字段）
+	var rawData map[string]any
+	json.Unmarshal([]byte(cached), &rawData)
+	var texts []string
+	for i := 1; i <= 6; i++ {
+		key := fmt.Sprintf("p%d", i)
+		if p, ok := rawData[key].(string); ok && p != "" {
+			texts = append(texts, p)
+		} else {
+			break
+		}
+	}
+
 	// 生成带签名的临时下载链接
 	imageUrl, err := oss.GetObjectURL(capData.Key, 300)
 	if err != nil {
@@ -184,10 +196,13 @@ func FetchCaptcha(c echo.Context) (err error) {
 		return util.BuildError("1003")
 	}
 
-	respBody := map[string]string{
+	respBody := map[string]any{
 		"uid":        uid,
 		"valid_code": capData.ValidCode,
 		"url":        imageUrl,
+	}
+	if len(texts) > 0 {
+		respBody["texts"] = texts
 	}
 
 	response := util.SuccessResponse()
