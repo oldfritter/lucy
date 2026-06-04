@@ -19,7 +19,7 @@ type registerRequest struct {
 	Username   string `form:"Username" validate:"required,max=32"`
 	Password   string `form:"Password" validate:"required,max=32"`
 	Nickname   string `form:"Nickname" validate:"max=32"`
-	Email      string `form:"Email" validate:"email"`
+	Email      string `form:"Email"`
 	Phone      string `form:"Phone"`
 	Gender     string `form:"Gender" validate:"oneof=f m"`
 	InviteCode string `form:"InviteCode" validate:"max=16"`
