@@ -113,7 +113,7 @@ func Register(c echo.Context) (err error) {
 	cacheRedis := kv.GetRedisConn("cache")
 	defer cacheRedis.Close()
 	key := "lucy:login:token:web:" + strconv.Itoa(user.Id)
-	cacheRedis.Do("SET", key, token)
+	cacheRedis.Do("SET", key, token, "EX", base.JwtExpire*24*3600)
 
 	resp := sanitizeUser(&user)
 	resp.Token = token
@@ -152,7 +152,7 @@ func Login(c echo.Context) (err error) {
 	cacheRedis := kv.GetRedisConn("cache")
 	defer cacheRedis.Close()
 	key := "lucy:login:token:web:" + strconv.Itoa(user.Id)
-	cacheRedis.Do("SET", key, token)
+	cacheRedis.Do("SET", key, token, "EX", base.JwtExpire*24*3600)
 
 	resp := sanitizeUser(&user)
 	resp.Token = token
