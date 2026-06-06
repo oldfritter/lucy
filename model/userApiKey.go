@@ -30,6 +30,7 @@ func (uak *UserApiKey) AfterDelete(tx *gorm.DB) error {
 
 func syncApiKeyCache(uak *UserApiKey) error {
 	return cache.SetApiKeyCache(uak.Key, &cache.ApiKeyCache{
+		Id:          uak.Id,
 		Secret:      uak.Secret,
 		IsActive:    uak.IsActive,
 		UserId:      uak.UserId,

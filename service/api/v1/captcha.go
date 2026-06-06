@@ -195,6 +195,20 @@ func FetchCaptcha(c echo.Context) (err error) {
 		pool.RemoveFromCampaignPool(int(campaignID), uid)
 	}
 
+	// 将消费此验证码的 ApiKey ID 写入 DB
+	apiKeyId := apiKey.Id
+	userApiKeyId := &apiKeyId
+	switch apiKey.CaptchaType {
+	case "text:4":
+		db.MysqlDB.Model(&model.CaptchaText4{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
+	case "text:5":
+		db.MysqlDB.Model(&model.CaptchaText5{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
+	case "text:6":
+		db.MysqlDB.Model(&model.CaptchaText6{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
+	case "image:rotate":
+		db.MysqlDB.Model(&model.CaptchaImageRotate{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
+	}
+
 	// 生成带签名的临时下载链接
 	imageUrl, err := oss.GetObjectURL(capData.Key, 300)
 	if err != nil {

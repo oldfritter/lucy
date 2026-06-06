@@ -17,6 +17,7 @@ const apiKeyPrefix = base.RedisNamespace + ":apikey:"
 
 // ApiKeyCache API Key 的缓存结构
 type ApiKeyCache struct {
+	Id             int    `json:"id"`
 	Secret         string `json:"secret"`
 	IsActive       bool   `json:"is_active"`
 	UserId         int    `json:"user_id"`

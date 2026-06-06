@@ -31,6 +31,7 @@ func loadApiKeysToRedis() error {
 
 	for _, k := range keys {
 		c := cache.ApiKeyCache{
+			Id:          k.Id,
 			Secret:      k.Secret,
 			IsActive:    k.IsActive,
 			UserId:      k.UserId,
