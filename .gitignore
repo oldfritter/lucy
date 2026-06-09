@@ -20,8 +20,8 @@ tmp/
 cmd/
 config/*.yml
 config/*.json
-config/certs/
 config/ttf/
+config/img/
 logs/*.log
 log/*.log
 pids/*.pid

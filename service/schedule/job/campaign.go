@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/png"
 	"log"
-	"math"
 	"math/rand"
 	"strings"
 
@@ -394,16 +393,10 @@ func uploadImage(ossKey string, img image.Image) error {
 
 func createRotateCaptcha(campaign *model.Campaign) error {
 	c := model.CaptchaImageRotate{
-		Indicator: "▲",
 		Tolerance: 15,
 	}
 	c.UserId = campaign.UserId
 	c.CampaignId = &campaign.Id
-	c.Width, c.Height = 300, 300
-
-	c.Angle = float64(randInt(30, 330))
-	// 让角度偏离竖直方向一定程度
-	c.Angle = math.Mod(c.Angle+180, 360) - 180 // [-180, 180]
 
 	tx := db.BeginTx()
 	defer tx.DbRollback()
@@ -411,6 +404,7 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 		return err
 	}
 	c.Create()
+	tx.Save(&c)
 	tx.DbCommit()
 	pool.AddToPool("image:rotate", c.Uid)
 	if campaign.Type == dom.CampaignTypeSystem {

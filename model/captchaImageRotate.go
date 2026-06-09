@@ -71,16 +71,24 @@ func (captcha *CaptchaImageRotate) GetWithPaginate(db *gorm.DB, r *util.Response
 	r.Body = results
 }
 
-// Create 生成旋转验证码图片并写入缓存
+// Create 生成旋转验证码图片并写入缓存，同时更新图片宽高
 func (captcha *CaptchaImageRotate) Create() {
-	if captcha.Indicator == "" {
-		captcha.Indicator = "▲"
-	}
 	if captcha.Tolerance == 0 {
 		captcha.Tolerance = 15
 	}
 
-	_, captcha.Angle = captchaImage.GenerateRotateCaptcha(captcha.Indicator)
+	// 先生成图片，获取实际尺寸
+	_, captcha.Angle = captchaImage.GenerateRotateCaptcha()
+	// 随机取一张背景图来确定尺寸
+	if len(captchaImage.BackgroundImgs) > 0 {
+		bg := captchaImage.BackgroundImgs[0]
+		bounds := bg.Bounds()
+		captcha.Width = bounds.Dx()
+		captcha.Height = bounds.Dy()
+	} else {
+		captcha.Width = 300
+		captcha.Height = 300
+	}
 }
 
 // Verify 验证用户提交的旋转角度

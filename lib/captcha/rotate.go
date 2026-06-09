@@ -3,6 +3,7 @@ package captcha
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 	"math/rand"
 )
@@ -80,20 +81,35 @@ func rgba(c color.Color) color.RGBA {
 	}
 }
 
-// GenerateRotateCaptcha 生成旋转验证码图片（透明背景，动态尺寸）。
-// indicator: 方向指示文字，如 "▲"
+// GenerateRotateCaptcha 生成旋转验证码图片。
+// 从系统图片库随机选取一张背景图，然后随机旋转。
 // 返回：旋转后的图片、旋转角度（0-360）
-func GenerateRotateCaptcha(indicator string) (image.Image, float64) {
-	fontSize := 72.0
-	w, h := 300, 300
+func GenerateRotateCaptcha() (image.Image, float64) {
+	bg := getBackground()
+	bounds := bg.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
 
+	// 创建与背景同等尺寸的画布，绘制背景
 	canvas := image.NewRGBA(image.Rect(0, 0, w, h))
-
-	// 绘制大号方向指示符（居中偏上）
-	AddText(canvas, indicator, w/2-30, h/2+int(fontSize/3))
+	draw.Draw(canvas, bounds, bg, bounds.Min, draw.Src)
 
 	angle := 120 + rand.Float64()*180
 
 	rotated := ImageRotate(canvas, angle)
 	return rotated, angle
+}
+
+// getBackground 从系统图片库随机选取一张背景图
+func getBackground() image.Image {
+	if len(BackgroundImgs) == 0 {
+		// 无背景图时回退到白色画布
+		img := image.NewRGBA(image.Rect(0, 0, 300, 300))
+		for x := 0; x < 300; x++ {
+			for y := 0; y < 300; y++ {
+				img.Set(x, y, color.White)
+			}
+		}
+		return img
+	}
+	return BackgroundImgs[rand.Intn(len(BackgroundImgs))]
 }

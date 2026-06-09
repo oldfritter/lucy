@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	Fonts []*truetype.Font
+	Fonts           []*truetype.Font
+	BackgroundImgs  []image.Image // 旋转验证码背景图库
 )
 
 func getFont() *truetype.Font {
