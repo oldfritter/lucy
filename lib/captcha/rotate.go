@@ -3,7 +3,6 @@ package captcha
 import (
 	"image"
 	"image/color"
-	"image/draw"
 	"math"
 	"math/rand"
 )
@@ -82,21 +81,59 @@ func rgba(c color.Color) color.RGBA {
 }
 
 // GenerateRotateCaptcha 生成旋转验证码图片。
-// 从系统图片库随机选取一张背景图，然后随机旋转。
-// 返回：旋转后的图片、旋转角度（0-360）
-func GenerateRotateCaptcha() (image.Image, float64) {
+// 从系统图片库随机选取一张背景图，裁剪为直径 200px 的圆形，然后随机旋转。
+// 返回：旋转后的图片、逆时针旋转角度
+func GenerateRotateCaptcha() (image.Image, int) {
 	bg := getBackground()
-	bounds := bg.Bounds()
-	w, h := bounds.Dx(), bounds.Dy()
 
-	// 创建与背景同等尺寸的画布，绘制背景
-	canvas := image.NewRGBA(image.Rect(0, 0, w, h))
-	draw.Draw(canvas, bounds, bg, bounds.Min, draw.Src)
+	// 将背景图裁剪为直径 200px 的圆形
+	circle := toCircle(bg)
 
-	angle := 120 + rand.Float64()*180
+	angle := int(math.Round(120 + rand.Float64()*180))
 
-	rotated := ImageRotate(canvas, angle)
+	rotated := ImageRotate(circle, float64(angle))
 	return rotated, angle
+}
+
+// toCircle 将图片缩放并裁剪为直径 200px 的圆形（圆形外透明）
+func toCircle(src image.Image) *image.RGBA {
+	const diameter = 200
+	radius := float64(diameter) / 2
+	dst := image.NewRGBA(image.Rect(0, 0, diameter, diameter))
+
+	srcBounds := src.Bounds()
+	srcW := float64(srcBounds.Dx())
+	srcH := float64(srcBounds.Dy())
+
+	// 缩放比例：保持宽高比覆盖 200x200（超出部分中心裁切）
+	scale := math.Max(float64(diameter)/srcW, float64(diameter)/srcH)
+	sw := srcW * scale
+	sh := srcH * scale
+	ox := (sw - float64(diameter)) / 2
+	oy := (sh - float64(diameter)) / 2
+
+	for y := 0; y < diameter; y++ {
+		for x := 0; x < diameter; x++ {
+			// 圆形遮罩：圆外像素保持透明
+			dx := float64(x) - radius
+			dy := float64(y) - radius
+			if dx*dx+dy*dy > radius*radius {
+				continue
+			}
+
+			// 映射回原图坐标
+			sx := (float64(x) + ox) / scale
+			sy := (float64(y) + oy) / scale
+
+			if sx < 0 || sx >= srcW || sy < 0 || sy >= srcH {
+				continue
+			}
+
+			dst.Set(x, y, bilinearSample(src, sx, sy))
+		}
+	}
+
+	return dst
 }
 
 // getBackground 从系统图片库随机选取一张背景图

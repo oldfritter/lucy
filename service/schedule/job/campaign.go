@@ -403,7 +403,10 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	if err := tx.Create(&c).Error; err != nil {
 		return err
 	}
-	c.Create()
+	img := c.Create()
+	if err := uploadImage(c.Key, img); err != nil {
+		return err
+	}
 	tx.Save(&c)
 	tx.DbCommit()
 	pool.AddToPool("image:rotate", c.Uid)

@@ -8,6 +8,7 @@ FROM alpine
 ENV TZ=Asia/Shanghai
 LABEL cn.oldfritter.image.authors="leon@oldfritter.cn"
 WORKDIR /app
+COPY config/img /app/config/img
 COPY config/locale /app/config/locale
 COPY config/ttf /app/config/ttf
 COPY --from=builder /app/cmd/schedule /app/cmd/schedule
