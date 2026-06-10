@@ -7,6 +7,7 @@ RUN cd /app && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/api service
 FROM alpine
 ENV TZ=Asia/Shanghai
 LABEL cn.oldfritter.image.authors="leon@oldfritter.cn"
+RUN apk update; apk upgrade -af; apk add --upgrade openssl tzdata
 WORKDIR /app
 COPY config/locale /app/config/locale
 COPY config/ttf /app/config/ttf
