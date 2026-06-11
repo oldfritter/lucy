@@ -18,8 +18,7 @@ import (
 // CaptchaImageRotate 旋转验证码
 type CaptchaImageRotate struct {
 	dom.Captcha
-	Indicator string `gorm:"size:64"`    // 方向指示文字，如 "▲"
-	Angle     int    `gorm:"size:8"`     // 逆时针旋转角度
+	Angle     int    `gorm:"size:16"`    // 逆时针旋转角度
 	Tolerance int    `gorm:"default:15"` // 验证容差角度
 }
 

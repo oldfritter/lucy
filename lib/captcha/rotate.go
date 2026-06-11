@@ -81,8 +81,9 @@ func rgba(c color.Color) color.RGBA {
 }
 
 // GenerateRotateCaptcha 生成旋转验证码图片。
-// 从系统图片库随机选取一张背景图，裁剪为直径 200px 的圆形，然后随机旋转。
-// 返回：旋转后的图片、逆时针旋转角度
+// 从系统图片库随机选取一张背景图，裁剪为直径 200px 的圆形，随机旋转，
+// 最后以图片圆心为中心裁剪为 200×200。
+// 返回：旋转并裁剪后的图片、逆时针旋转角度
 func GenerateRotateCaptcha() (image.Image, int) {
 	bg := getBackground()
 
@@ -92,7 +93,22 @@ func GenerateRotateCaptcha() (image.Image, int) {
 	angle := int(math.Round(120 + rand.Float64()*180))
 
 	rotated := ImageRotate(circle, float64(angle))
-	return rotated, angle
+	cropped := centerCrop(rotated, 200)
+	return cropped, angle
+}
+
+// centerCrop 从图片中心裁取指定尺寸的区域
+func centerCrop(src image.Image, size int) *image.RGBA {
+	bounds := src.Bounds()
+	cx := (bounds.Dx() - size) / 2
+	cy := (bounds.Dy() - size) / 2
+	dst := image.NewRGBA(image.Rect(0, 0, size, size))
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			dst.Set(x, y, src.At(cx+x, cy+y))
+		}
+	}
+	return dst
 }
 
 // toCircle 将图片缩放并裁剪为直径 200px 的圆形（圆形外透明）
