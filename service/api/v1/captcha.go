@@ -65,12 +65,14 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:4", uid, false)
 			pool.RemoveFromPendingPool(uid)
+			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:4", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		recordVerifyResult(captcha.UserApiKeyId, true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
@@ -82,12 +84,14 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:5", uid, false)
 			pool.RemoveFromPendingPool(uid)
+			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:5", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		recordVerifyResult(captcha.UserApiKeyId, true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
@@ -99,12 +103,14 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:6", uid, false)
 			pool.RemoveFromPendingPool(uid)
+			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:6", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+		recordVerifyResult(captcha.UserApiKeyId, true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
@@ -120,15 +126,25 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		pool.AddToVerifiedPool("image:rotate", uid, false)
 		pool.RemoveFromPendingPool(uid)
+		recordVerifyResult(captcha.UserApiKeyId, false)
 		return util.BuildError("1300")
 	}
 	pool.AddToVerifiedPool("image:rotate", uid, true)
 	pool.ResetRecallCount(uid)
 	pool.RemoveFromPendingPool(uid)
 	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
+	recordVerifyResult(captcha.UserApiKeyId, true)
 	resp := util.SuccessResponse()
 	resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 	return c.JSON(http.StatusOK, resp)
+}
+
+func recordVerifyResult(captchaUserApiKeyId *int, isSuccess bool) {
+	if captchaUserApiKeyId != nil {
+		if err := cache.RecordVerifyResult(*captchaUserApiKeyId, isSuccess); err != nil {
+			log.Printf("[verify] record verify result (apiKeyId=%d, success=%v) failed: %v", *captchaUserApiKeyId, isSuccess, err)
+		}
+	}
 }
 
 func pointsToInts(input []verifyPoint) [][]int {

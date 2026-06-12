@@ -42,6 +42,7 @@ func SetV1Interface(e *echo.Echo) {
 			apikeyGroup.GET("/list", v1.GetMyApiKeyList)
 			apikeyGroup.GET("/:id", v1.GetMyApiKey)
 			apikeyGroup.GET("/:id/stats", v1.GetMyApiKeyStats)
+			apikeyGroup.GET("/:id/verify-stats", v1.GetMyApiKeyVerifyStats)
 			apikeyGroup.POST("", v1.CreateMyApiKey)
 			apikeyGroup.POST("/", v1.CreateMyApiKey)
 			apikeyGroup.PUT("/:id", v1.UpdateMyApiKey)

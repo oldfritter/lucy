@@ -174,7 +174,80 @@ func GetMyApiKeyStats(c echo.Context) (err error) {
 		}
 	}
 
-	body, err := cache.GetApiKeyStats(uak.Id, startTs, endTs)
+	// 同时获取总请求统计和验证结果统计（成功/失败）
+	totalStats, err := cache.GetApiKeyStats(uak.Id, startTs, endTs)
+	if err != nil {
+		return util.BuildError("1006")
+	}
+
+	verifyStats, err := cache.GetVerifyStats(uak.Id, startTs, endTs)
+	if err != nil {
+		return util.BuildError("1006")
+	}
+
+	// 按分钟构建验证结果 lookup
+	verifyMap := make(map[string]*cache.VerifyStatsEntry, len(verifyStats))
+	for i := range verifyStats {
+		verifyMap[verifyStats[i].Minute] = &verifyStats[i]
+	}
+
+	// 合并：每个分钟的总请求数 + 成功/失败数
+	type mergedEntry struct {
+		Minute  string `json:"minute"`
+		Count   int    `json:"count"`
+		Success int    `json:"success"`
+		Failed  int    `json:"failed"`
+	}
+	result := make([]mergedEntry, 0, len(totalStats))
+	for _, ts := range totalStats {
+		entry := mergedEntry{
+			Minute:  ts.Minute,
+			Count:   ts.Count,
+			Success: 0,
+			Failed:  0,
+		}
+		if vs, ok := verifyMap[ts.Minute]; ok {
+			entry.Success = vs.Success
+			entry.Failed = vs.Failed
+		}
+		result = append(result, entry)
+	}
+
+	resp := util.SuccessResponse()
+	resp.Body = result
+	return c.JSON(http.StatusOK, resp)
+}
+
+// GetMyApiKeyVerifyStats 当前用户查看自己 ApiKey 的分钟级验证结果（成功/失败）统计
+//
+//	查询参数（可选）：
+//	  start — 起始时间，格式 "2006-01-02T15:04:05" 或 Unix 秒时间戳（默认 24 小时前）
+//	  end   — 截止时间，同上（默认当前时间）
+func GetMyApiKeyVerifyStats(c echo.Context) (err error) {
+	claims, _ := base.GetClaim(c)
+
+	var uak model.UserApiKey
+	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
+		First(&uak).Error; err != nil {
+		return util.BuildError("1003")
+	}
+
+	now := time.Now()
+	endTs := now.Unix()
+	startTs := now.Add(-24 * time.Hour).Unix()
+
+	if s := c.QueryParam("start"); s != "" {
+		if t, err := parseTimeParam(s); err == nil {
+			startTs = t.Unix()
+		}
+	}
+	if e := c.QueryParam("end"); e != "" {
+		if t, err := parseTimeParam(e); err == nil {
+			endTs = t.Unix()
+		}
+	}
+
+	body, err := cache.GetVerifyStats(uak.Id, startTs, endTs)
 	if err != nil {
 		return util.BuildError("1006")
 	}

@@ -156,7 +156,7 @@ func GetApiKeyStats(apiKeyId int, startTs, endTs int64) ([]StatsEntry, error) {
 		return nil, err
 	}
 	if len(members) == 0 {
-		return nil, nil
+		return []StatsEntry{}, nil
 	}
 
 	// 从 Hash 批量拉取计数
@@ -178,6 +178,100 @@ func GetApiKeyStats(apiKeyId int, startTs, endTs int64) ([]StatsEntry, error) {
 		count, err := redis.Int(reply, nil)
 		if err == nil && count > 0 {
 			result = append(result, StatsEntry{Minute: members[i], Count: count})
+		}
+	}
+	return result, nil
+}
+
+// ── API Key 验证结果分钟级统计（成功/失败，10 天过期）──
+
+const verifyResultHashPrefix = base.RedisNamespace + ":apikey:verify:"
+const verifyResultIdxPrefix = base.RedisNamespace + ":apikey:verify:idx:"
+
+// VerifyStatsEntry 单分钟验证统计数据（含成功/失败）
+type VerifyStatsEntry struct {
+	Minute  string `json:"minute"`
+	Success int    `json:"success"`
+	Failed  int    `json:"failed"`
+}
+
+// RecordVerifyResult 记录 API Key 当前分钟的一次验证结果（成功/失败）
+// Hash 存储分钟级成功/失败计数，Sorted Set 维护时间索引，10 天后自动过期
+func RecordVerifyResult(apiKeyId int, isSuccess bool) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+
+	now := time.Now()
+	minute := now.Format("200601021504")
+	ts := now.Truncate(time.Minute).Unix()
+
+	hashKey := fmt.Sprintf("%s%d", verifyResultHashPrefix, apiKeyId)
+	idxKey := fmt.Sprintf("%s%d", verifyResultIdxPrefix, apiKeyId)
+
+	conn.Send("MULTI")
+	if isSuccess {
+		conn.Send("HINCRBY", hashKey, minute+":success", 1)
+	} else {
+		conn.Send("HINCRBY", hashKey, minute+":failed", 1)
+	}
+	conn.Send("ZADD", idxKey, "NX", ts, minute)
+	conn.Send("EXPIRE", hashKey, 864000) // 10 天
+	conn.Send("EXPIRE", idxKey, 864000)  // 10 天
+	_, err := redis.Ints(conn.Do("EXEC"))
+	return err
+}
+
+// GetVerifyStats 获取 API Key 在指定时间戳范围内的分钟级验证结果计数
+// 返回按时间升序排列的列表，每个元素包含成功/失败次数
+func GetVerifyStats(apiKeyId int, startTs, endTs int64) ([]VerifyStatsEntry, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+
+	idxKey := fmt.Sprintf("%s%d", verifyResultIdxPrefix, apiKeyId)
+	hashKey := fmt.Sprintf("%s%d", verifyResultHashPrefix, apiKeyId)
+
+	members, err := redis.Strings(conn.Do("ZRANGEBYSCORE", idxKey, startTs, endTs))
+	if err != nil {
+		return nil, err
+	}
+	if len(members) == 0 {
+		return []VerifyStatsEntry{}, nil
+	}
+
+	// 从 Hash 批量拉取成功/失败计数
+	args := make([]interface{}, 0, len(members)*2)
+	for _, m := range members {
+		args = append(args, m+":success", m+":failed")
+	}
+	hmgetArgs := append([]interface{}{hashKey}, args...)
+	replies, err := redis.Values(conn.Do("HMGET", hmgetArgs...))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]VerifyStatsEntry, 0, len(members))
+	for i, m := range members {
+		successIdx := i * 2
+		failedIdx := i*2 + 1
+		if successIdx >= len(replies) || failedIdx >= len(replies) {
+			break
+		}
+
+		successCount := 0
+		failedCount := 0
+		if replies[successIdx] != nil {
+			successCount, _ = redis.Int(replies[successIdx], nil)
+		}
+		if replies[failedIdx] != nil {
+			failedCount, _ = redis.Int(replies[failedIdx], nil)
+		}
+
+		if successCount > 0 || failedCount > 0 {
+			result = append(result, VerifyStatsEntry{
+				Minute:  m,
+				Success: successCount,
+				Failed:  failedCount,
+			})
 		}
 	}
 	return result, nil
