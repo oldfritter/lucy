@@ -60,11 +60,11 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 	case 4:
 		var captcha model.CaptchaText4
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
+			return util.BuildError("1301")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:4", uid, false)
-			return util.BuildError("1008")
+			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:4", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
@@ -74,11 +74,11 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 	case 5:
 		var captcha model.CaptchaText5
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
+			return util.BuildError("1301")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:5", uid, false)
-			return util.BuildError("1008")
+			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:5", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
@@ -88,11 +88,11 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 	case 6:
 		var captcha model.CaptchaText6
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1003")
+			return util.BuildError("1301")
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:6", uid, false)
-			return util.BuildError("1008")
+			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:6", uid, true)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
@@ -106,11 +106,11 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 	var captcha model.CaptchaImageRotate
 	if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1301")
 	}
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		pool.AddToVerifiedPool("image:rotate", uid, false)
-		return util.BuildError("1008")
+		return util.BuildError("1300")
 	}
 	pool.AddToVerifiedPool("image:rotate", uid, true)
 	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
@@ -143,13 +143,10 @@ func FetchCaptcha(c echo.Context) (err error) {
 	// 每分钟限速检查
 	allowed, err := cache.CheckRateLimit(apiKey.Secret, apiKey.PerMinuteLimit)
 	if err != nil {
-		return util.BuildError("1007", "速率检查失败")
+		return util.BuildError("1006")
 	}
 	if !allowed {
-		resp := util.SuccessResponse()
-		resp.Head["Code"] = "1010"
-		resp.Head["Msg"] = "超出每分钟最大验证次数"
-		return c.JSON(http.StatusTooManyRequests, resp)
+		return c.JSON(http.StatusTooManyRequests, util.BuildError("1303"))
 	}
 
 	// 记录本次请求到分钟级访问统计
@@ -160,10 +157,10 @@ func FetchCaptcha(c echo.Context) (err error) {
 	// 从对应类型的池中捞取一个 uid
 	uid, err := pool.PopFromPool(apiKey.CaptchaType)
 	if err != nil {
-		return util.BuildError("1007", "捞取验证码失败")
+		return util.BuildError("1006")
 	}
 	if uid == "" {
-		return util.BuildError("1008", "池中无可用验证码")
+		return util.BuildError("1302")
 	}
 
 	// 从缓存获取验证码数据
@@ -171,7 +168,7 @@ func FetchCaptcha(c echo.Context) (err error) {
 	cached, err := cache.GetCaptchaCache(cacheId)
 	if err != nil || cached == "" {
 		pool.AddToPool(apiKey.CaptchaType, uid) // 回放
-		return util.BuildError("1003")
+		return util.BuildError("1301")
 	}
 
 	var capData struct {
@@ -180,7 +177,7 @@ func FetchCaptcha(c echo.Context) (err error) {
 	}
 	if err = json.Unmarshal([]byte(cached), &capData); err != nil {
 		pool.AddToPool(apiKey.CaptchaType, uid)
-		return util.BuildError("1003")
+		return util.BuildError("1301")
 	}
 
 	// 解析文字内容（文字类验证码才包含 p1-p6 字段）
@@ -219,7 +216,7 @@ func FetchCaptcha(c echo.Context) (err error) {
 	imageUrl, err := oss.GetObjectURL(capData.Key, 300)
 	if err != nil {
 		pool.AddToPool(apiKey.CaptchaType, uid)
-		return util.BuildError("1003")
+		return util.BuildError("1505")
 	}
 
 	respBody := map[string]any{

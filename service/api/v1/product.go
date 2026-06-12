@@ -30,7 +30,7 @@ func GetProduct(c echo.Context) (err error) {
 	if err = db.MysqlDB.Where("id = ?", c.Param("id")).
 		Preload("Currency").
 		First(&product).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1502")
 	}
 	response := util.SuccessResponse()
 	response.Body = product

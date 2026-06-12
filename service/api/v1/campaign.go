@@ -36,7 +36,7 @@ func GetMyCampaign(c echo.Context) (err error) {
 	var campaign model.Campaign
 	if err = db.MysqlDB.Preload("Product").Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&campaign).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1500")
 	}
 	response := util.SuccessResponse()
 	response.Body = campaign
@@ -64,7 +64,7 @@ func CreateMyCampaign(c echo.Context) (err error) {
 	// 验证关联商品存在
 	var product model.Product
 	if err = db.MysqlDB.First(&product, input.ProductId).Error; err != nil {
-		return util.BuildError("1003", "商品不存在")
+		return util.BuildError("1502")
 	}
 
 	if input.CaptchaCount == 0 {
@@ -87,7 +87,7 @@ func CreateMyCampaign(c echo.Context) (err error) {
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&campaign).Error != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	tx.DbCommit()
 	db.MysqlDB.Preload("Product").First(&campaign, campaign.Id)
@@ -102,7 +102,7 @@ func UpdateMyCampaign(c echo.Context) (err error) {
 	var campaign model.Campaign
 	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&campaign).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1500")
 	}
 
 	// 只绑定用户可修改的字段，不绑定 Status
@@ -145,7 +145,7 @@ func DeleteMyCampaign(c echo.Context) (err error) {
 	var campaign model.Campaign
 	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&campaign).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1500")
 	}
 	tx := db.BeginTx()
 	defer tx.DbRollback()

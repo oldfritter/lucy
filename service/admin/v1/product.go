@@ -48,7 +48,7 @@ func CreateProduct(c echo.Context) (err error) {
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&product).Error != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	tx.DbCommit()
 	response := util.SuccessResponse()

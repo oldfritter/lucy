@@ -22,7 +22,7 @@ func Auth() echo.MiddlewareFunc {
 			return treatToken(c, func(token string, fn func(string, any, *jwt.Token, echo.HandlerFunc) error) error {
 				jwttoken, err := base.JWT.ValidateToken(token)
 				if err != nil || jwttoken == nil {
-					return util.BuildError("1005")
+					return util.BuildError("1004")
 				}
 				jtc := jwttoken.Claims.(jwt.MapClaims)
 				return fn(
@@ -47,7 +47,7 @@ func treatToken(c echo.Context, fn func(string, func(string, any, *jwt.Token, ec
 		}
 	}
 	if len(token) < 1 {
-		return util.BuildError("1005")
+		return util.BuildError("1004")
 	}
 	return fn(token, func(tokenKey string, userId any, jwttoken *jwt.Token, next echo.HandlerFunc) error {
 		key := fmt.Sprintf("%s:%v", tokenKey, userId)
@@ -57,7 +57,7 @@ func treatToken(c echo.Context, fn func(string, func(string, any, *jwt.Token, ec
 			c.Set("Claim", jwttoken.Claims)
 			return next(c)
 		} else {
-			return util.BuildError("1005")
+			return util.BuildError("1004")
 		}
 	})
 }

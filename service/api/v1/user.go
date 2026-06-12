@@ -73,7 +73,7 @@ func Register(c echo.Context) (err error) {
 	// 检查用户名是否已存在
 	var exist model.User
 	if db.MysqlDB.Where("username = ?", req.Username).First(&exist).Error == nil {
-		return util.BuildError("1007", "用户名已存在")
+		return util.BuildError("1103")
 	}
 
 	// 如果提供了邀请码，查找邀请人
@@ -101,14 +101,14 @@ func Register(c echo.Context) (err error) {
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if err = tx.Create(&user).Error; err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	tx.DbCommit()
 
 	// 生成 JWT 并写入 Redis
 	token, err := base.JWT.GenerateToken(&user)
 	if err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	cacheRedis := kv.GetRedisConn("cache")
 	defer cacheRedis.Close()
@@ -135,19 +135,19 @@ func Login(c echo.Context) (err error) {
 
 	var user model.User
 	if err = db.MysqlDB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		return util.BuildError("1005", "用户名或密码错误")
+		return util.BuildError("1100")
 	}
 
 	// 设置明文密码用于比对
 	user.Password = req.Password
 	if !user.CompareHashAndPassword() {
-		return util.BuildError("1005", "用户名或密码错误")
+		return util.BuildError("1100")
 	}
 
 	// 生成 JWT 并写入 Redis
 	token, err := base.JWT.GenerateToken(&user)
 	if err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	cacheRedis := kv.GetRedisConn("cache")
 	defer cacheRedis.Close()
@@ -212,5 +212,47 @@ func UpdateMyProfile(c echo.Context) (err error) {
 
 	response := util.SuccessResponse()
 	response.Body = sanitizeUser(&user)
+	return c.JSON(http.StatusOK, response)
+}
+
+type changePasswordRequest struct {
+	OldPassword string `form:"OldPassword" validate:"required,max=32"`
+	NewPassword string `form:"NewPassword" validate:"required,max=32"`
+}
+
+// ChangePassword 修改当前用户密码（需验证旧密码）
+func ChangePassword(c echo.Context) (err error) {
+	var req changePasswordRequest
+	if err = c.Bind(&req); err != nil {
+		return util.BuildError("1001")
+	}
+	if err = c.Validate(&req); err != nil {
+		return util.BuildError("1002", err.Error())
+	}
+
+	claims, _ := base.GetClaim(c)
+	var user model.User
+	if err = db.MysqlDB.Where("id = ?", claims.UserId).First(&user).Error; err != nil {
+		return util.BuildError("1003")
+	}
+
+	// 验证旧密码
+	user.Password = req.OldPassword
+	if !user.CompareHashAndPassword() {
+		return util.BuildError("1101")
+	}
+
+	// 更新为新密码
+	user.Password = req.NewPassword
+	user.SetEncrypted()
+	db.MysqlDB.Model(&user).Update("encrypted", user.Encrypted)
+
+	// 清除 Redis 中的登录 token，强制用户重新登录
+	cacheRedis := kv.GetRedisConn("cache")
+	defer cacheRedis.Close()
+	key := "lucy:login:token:web:" + strconv.Itoa(user.Id)
+	cacheRedis.Do("DEL", key)
+
+	response := util.SuccessResponse()
 	return c.JSON(http.StatusOK, response)
 }

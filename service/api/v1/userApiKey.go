@@ -41,7 +41,7 @@ func GetMyApiKeyList(c echo.Context) (err error) {
 		Offset((int(body.Pagination.CurrentPage) - 1) * int(body.Pagination.PerPage)).
 		Limit(int(body.Pagination.PerPage)).
 		Find(&results).Error; err != nil {
-		return util.BuildError("1000")
+		return util.BuildError("1005")
 	}
 	for i := range results {
 		results[i].Mask()
@@ -70,7 +70,7 @@ func CreateMyApiKey(c echo.Context) (err error) {
 	// 限制单个用户最多创建 5 个 API Key
 	var count int64
 	if db.MysqlDB.Model(&model.UserApiKey{}).Where("user_id = ?", claims.UserId).Count(&count); count >= 5 {
-		return util.BuildError("1009")
+		return util.BuildError("1200")
 	}
 
 	var input struct {
@@ -87,7 +87,7 @@ func CreateMyApiKey(c echo.Context) (err error) {
 	// 验证商品存在，获取 CaptchaType 和 PerMinuteLimit
 	var product model.Product
 	if err = db.MysqlDB.First(&product, input.ProductId).Error; err != nil {
-		return util.BuildError("1003", "商品不存在")
+		return util.BuildError("1502")
 	}
 
 	uak := model.UserApiKey{
@@ -103,7 +103,7 @@ func CreateMyApiKey(c echo.Context) (err error) {
 	tx := db.BeginTx()
 	defer tx.DbRollback()
 	if tx.Create(&uak).Error != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 	tx.DbCommit()
 	response := util.SuccessResponse()
@@ -176,7 +176,7 @@ func GetMyApiKeyStats(c echo.Context) (err error) {
 
 	body, err := cache.GetApiKeyStats(uak.Id, startTs, endTs)
 	if err != nil {
-		return util.BuildError("1007", "获取统计数据失败")
+		return util.BuildError("1006")
 	}
 
 	resp := util.SuccessResponse()

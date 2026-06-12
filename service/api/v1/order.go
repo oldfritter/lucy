@@ -33,13 +33,13 @@ func CreateOrder(c echo.Context) (err error) {
 	var campaign model.Campaign
 	if err = db.MysqlDB.Preload("Product").Where("id = ? AND user_id = ?", input.CampaignId, claims.UserId).
 		First(&campaign).Error; err != nil {
-		return util.BuildError("1003", "投放不存在")
+		return util.BuildError("1500")
 	}
 	if campaign.Status != dom.StatusPending {
-		return util.BuildError("1002", "投放状态不允许创建订单")
+		return util.BuildError("1501")
 	}
 	if campaign.Product == nil {
-		return util.BuildError("1003", "投放关联商品不存在")
+		return util.BuildError("1502")
 	}
 
 	amount := campaign.Product.Amount
@@ -63,7 +63,7 @@ func CreateOrder(c echo.Context) (err error) {
 		},
 	}
 	if err = tx.Create(&order).Error; err != nil {
-		return util.BuildError("1007", "创建订单失败")
+		return util.BuildError("1005")
 	}
 
 	tx.DbCommit()
@@ -99,7 +99,7 @@ func GetMyOrder(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Currency").Preload("Incomes").Preload("Refunds").
 		Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 	response := util.SuccessResponse()
 	response.Body = order

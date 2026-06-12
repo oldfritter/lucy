@@ -34,6 +34,7 @@ func SetV1Interface(e *echo.Echo) {
 		{
 			userGroup.GET("/profile", v1.GetMyProfile)
 			userGroup.PUT("/profile", v1.UpdateMyProfile)
+			userGroup.PUT("/password", v1.ChangePassword)
 		}
 
 		apikeyGroup := authGroup.Group("/apikey")

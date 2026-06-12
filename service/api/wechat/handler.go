@@ -36,15 +36,15 @@ func CreateOrder(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Currency").
 		Where("order_no = ? AND user_id = ?", input.OrderNo, claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 
 	if order.Status != dom.StatusPending {
-		return util.BuildError("1005", "订单状态不允许支付")
+		return util.BuildError("1401")
 	}
 
 	if order.OrderNo == "" {
-		return util.BuildError("1007", "订单号缺失")
+		return util.BuildError("1405")
 	}
 
 	client := libWechat.NewClient()
@@ -57,7 +57,7 @@ func CreateOrder(c echo.Context) (err error) {
 		order.FinalAmount,    // total amount (分)
 	)
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("微信支付下单失败: %v", err))
+		return util.BuildError("1402")
 	}
 
 	response := util.SuccessResponse()
@@ -78,7 +78,7 @@ func QueryOrder(c echo.Context) (err error) {
 	var order model.Order
 	if err = db.MysqlDB.Where("order_no = ? AND user_id = ?", orderNo, claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 
 	client := libWechat.NewClient()
@@ -86,7 +86,7 @@ func QueryOrder(c echo.Context) (err error) {
 	// 查询微信支付订单状态
 	wxOrder, err := client.QueryOrder(order.OrderNo)
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("查询微信支付订单失败: %v", err))
+		return util.BuildError("1006")
 	}
 
 	response := util.SuccessResponse()
@@ -213,17 +213,17 @@ func CreateRefund(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Order").
 		Where("id = ? AND payment_source = ?", input.IncomeId, "wechat").
 		First(&income).Error; err != nil {
-		return util.BuildError("1003", "入账记录不存在或非微信支付")
+		return util.BuildError("1404")
 	}
 
 	// 验证归属
 	if income.Order == nil || income.Order.UserId != claims.UserId {
-		return util.BuildError("1003", "入账记录不存在")
+		return util.BuildError("1404")
 	}
 
 	// 验证退款金额
 	if input.Amount > income.Amount {
-		return util.BuildError("1005", "退款金额不能超过入账金额")
+		return util.BuildError("1403")
 	}
 
 	// 生成退款单号
@@ -240,7 +240,7 @@ func CreateRefund(c echo.Context) (err error) {
 		income.Amount, // total amount
 	)
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("微信退款失败: %v", err))
+		return util.BuildError("1402")
 	}
 
 	// 记录退款
@@ -260,7 +260,7 @@ func CreateRefund(c echo.Context) (err error) {
 		},
 	}
 	if err := tx.Create(&refund).Error; err != nil {
-		return util.BuildError("1007", "创建退款记录失败")
+		return util.BuildError("1005")
 	}
 
 	tx.DbCommit()

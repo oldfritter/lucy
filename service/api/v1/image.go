@@ -49,7 +49,7 @@ func UploadImage(c echo.Context) (err error) {
 	// 检测 MIME 类型
 	mimeType := http.DetectContentType(data)
 	if !allowedMimeTypes[mimeType] {
-		return util.BuildError("1002", "不支持的图片格式")
+		return util.BuildError("1504")
 	}
 
 	// 扩展名
@@ -76,12 +76,12 @@ func UploadImage(c echo.Context) (err error) {
 	defer tx.DbRollback()
 
 	if err = tx.Create(&img).Error; err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1005")
 	}
 
 	// DB 写入成功后立即上传至 OSS
 	if _, err = oss.PutObject(img.Path, &data); err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1505")
 	}
 
 	tx.DbCommit()
@@ -132,7 +132,7 @@ func GetMyImage(c echo.Context) (err error) {
 	var img model.Image
 	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&img).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1503")
 	}
 	img.Url, _ = oss.GetObjectURL(img.Path, 3600)
 	response := util.SuccessResponse()
@@ -146,12 +146,12 @@ func DeleteMyImage(c echo.Context) (err error) {
 	var img model.Image
 	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
 		First(&img).Error; err != nil {
-		return util.BuildError("1003")
+		return util.BuildError("1503")
 	}
 
 	// 先删 OSS，再删 DB；OSS 失败则保留 DB 记录
 	if err = oss.DeleteObject(img.Path); err != nil {
-		return util.BuildError("1007")
+		return util.BuildError("1505")
 	}
 
 	tx := db.BeginTx()

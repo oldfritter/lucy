@@ -34,15 +34,15 @@ func CreatePagePayOrder(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Currency").
 		Where("order_no = ? AND user_id = ?", input.OrderNo, claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 
 	if order.Status != dom.StatusPending {
-		return util.BuildError("1005", "订单状态不允许支付")
+		return util.BuildError("1401")
 	}
 
 	if order.OrderNo == "" {
-		return util.BuildError("1007", "订单号缺失")
+		return util.BuildError("1405")
 	}
 
 	client := libAlipay.NewClient()
@@ -56,7 +56,7 @@ func CreatePagePayOrder(c echo.Context) (err error) {
 
 	htmlForm, err := client.CreatePagePayOrder(biz)
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("支付宝下单失败: %v", err))
+		return util.BuildError("1402")
 	}
 
 	response := util.SuccessResponse()
@@ -82,15 +82,15 @@ func CreateWapPayOrder(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Currency").
 		Where("order_no = ? AND user_id = ?", input.OrderNo, claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 
 	if order.Status != dom.StatusPending {
-		return util.BuildError("1005", "订单状态不允许支付")
+		return util.BuildError("1401")
 	}
 
 	if order.OrderNo == "" {
-		return util.BuildError("1007", "订单号缺失")
+		return util.BuildError("1405")
 	}
 
 	client := libAlipay.NewClient()
@@ -104,7 +104,7 @@ func CreateWapPayOrder(c echo.Context) (err error) {
 
 	payURL, err := client.CreateWapPayOrder(biz)
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("支付宝下单失败: %v", err))
+		return util.BuildError("1402")
 	}
 
 	response := util.SuccessResponse()
@@ -124,7 +124,7 @@ func QueryOrder(c echo.Context) (err error) {
 	var order model.Order
 	if err = db.MysqlDB.Where("order_no = ? AND user_id = ?", orderNo, claims.UserId).
 		First(&order).Error; err != nil {
-		return util.BuildError("1003", "订单不存在")
+		return util.BuildError("1400")
 	}
 
 	client := libAlipay.NewClient()
@@ -133,7 +133,7 @@ func QueryOrder(c echo.Context) (err error) {
 		OutTradeNo: order.OrderNo,
 	})
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("查询支付宝订单失败: %v", err))
+		return util.BuildError("1006")
 	}
 
 	response := util.SuccessResponse()
@@ -233,15 +233,15 @@ func CreateRefund(c echo.Context) (err error) {
 	if err = db.MysqlDB.Preload("Order").
 		Where("id = ? AND payment_source = ?", input.IncomeId, "alipay").
 		First(&income).Error; err != nil {
-		return util.BuildError("1003", "入账记录不存在或非支付宝支付")
+		return util.BuildError("1404")
 	}
 
 	if income.Order == nil || income.Order.UserId != claims.UserId {
-		return util.BuildError("1003", "入账记录不存在")
+		return util.BuildError("1404")
 	}
 
 	if input.Amount > income.Amount {
-		return util.BuildError("1005", "退款金额不能超过入账金额")
+		return util.BuildError("1403")
 	}
 
 	refundNo := fmt.Sprintf("RF%s%s", income.Order.OrderNo, fmt.Sprintf("%d", income.Id))
@@ -255,7 +255,7 @@ func CreateRefund(c echo.Context) (err error) {
 		RefundReason: input.Reason,
 	})
 	if err != nil {
-		return util.BuildError("1007", fmt.Sprintf("支付宝退款失败: %v", err))
+		return util.BuildError("1402")
 	}
 
 	tx := db.BeginTx()
@@ -272,7 +272,7 @@ func CreateRefund(c echo.Context) (err error) {
 		},
 	}
 	if err := tx.Create(&refund).Error; err != nil {
-		return util.BuildError("1007", "创建退款记录失败")
+		return util.BuildError("1005")
 	}
 
 	tx.DbCommit()

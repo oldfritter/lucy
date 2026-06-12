@@ -1,12 +1,44 @@
 "en":
   code:
+    # System / General
     "1000": Success
-    "1001": The parameter is wrong
-    "1002": Attribute check failed
-    "1003": No Data
-    "1004": Need username or email
-    "1005": Not logged in
-    "1006": Incorrect account or password
-    "1007": Existed
-    "1008": Captcha verification failed
-    "1009": Maximum 5 API keys per user
+    "1001": Bad request
+    "1002": Validation failed
+    "1003": Resource not found
+    "1004": Not authenticated
+    "1005": Internal server error
+    "1006": External service error
+
+    # User / Auth (11xx)
+    "1100": Incorrect credentials
+    "1101": Old password is incorrect
+    "1102": Token expired
+    "1103": Username already exists
+
+    # API Key (12xx)
+    "1200": Maximum 5 API keys per user
+    "1201": API Key not found
+    "1202": API Key authentication failed
+    "1203": API Key is disabled
+
+    # Captcha (13xx)
+    "1300": Captcha verification failed
+    "1301": Captcha not found
+    "1302": No captcha available
+    "1303": Rate limit exceeded
+
+    # Order / Payment (14xx)
+    "1400": Order not found
+    "1401": Invalid order status
+    "1402": Payment failed
+    "1403": Refund amount exceeded
+    "1404": Income record not found
+    "1405": Order number missing
+
+    # Business / Resource (15xx)
+    "1500": Campaign not found
+    "1501": Invalid campaign status
+    "1502": Product not found
+    "1503": Image not found
+    "1504": Unsupported file format
+    "1505": OSS operation failed
