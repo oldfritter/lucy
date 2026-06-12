@@ -131,6 +131,61 @@ func CampaignPoolSize(campaignId int) (int64, error) {
 	return redis.Int64(conn.Do("SCARD", campaignPoolKey(campaignId)))
 }
 
+// ── 验证失败验证码回收 ──
+
+// DrainFailedPool 取出并清空某类型验证失败池，返回 UID 列表
+func DrainFailedPool(captchaType string) ([]string, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+
+	fk := verifiedFailedKey(captchaType)
+	uids, err := redis.Strings(conn.Do("SMEMBERS", fk))
+	if err != nil && err != redis.ErrNil {
+		return nil, err
+	}
+	if len(uids) > 0 {
+		conn.Do("DEL", fk)
+	}
+	return uids, nil
+}
+
+// recallCountKey 验证码回收次数的 Redis key
+func recallCountKey(uid string) string {
+	return base.RedisNamespace + ":captcha:recall-count:" + uid
+}
+
+// GetRecallCount 获取当前回收次数
+func GetRecallCount(uid string) (int, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	n, err := redis.Int(conn.Do("GET", recallCountKey(uid)))
+	if err == redis.ErrNil {
+		return 0, nil
+	}
+	return n, err
+}
+
+// IncrRecallCount 递增回收次数并刷新 7 天 TTL，返回递增后的值
+func IncrRecallCount(uid string) (int, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	key := recallCountKey(uid)
+	n, err := redis.Int(conn.Do("INCR", key))
+	if err != nil {
+		return 0, err
+	}
+	conn.Do("EXPIRE", key, 7*24*3600)
+	return n, nil
+}
+
+// ResetRecallCount 删除回收次数记录（验证码成功消费后调用）
+func ResetRecallCount(uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	_, err := conn.Do("DEL", recallCountKey(uid))
+	return err
+}
+
 // IsInVerifiedPool 检查 uid 是否已经被验证过（存在于任一类型的 success 或 failed 池中）
 func IsInVerifiedPool(uid string) (bool, error) {
 	conn := kv.GetRedisConn("data")

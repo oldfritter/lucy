@@ -281,7 +281,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		cc := model.CaptchaText5{
 			Prompt1: prompts[0], Prompt2: prompts[1], Prompt3: prompts[2], Prompt4: prompts[3], Prompt5: prompts[4],
 		}
-		cc.UserId = campaign.UserId
 		cc.CampaignId = &campaign.Id
 		cc.Width, cc.Height = imgW, imgH
 		tx := db.BeginTx()
@@ -304,7 +303,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 		cc := model.CaptchaText6{
 			Prompt1: prompts[0], Prompt2: prompts[1], Prompt3: prompts[2], Prompt4: prompts[3], Prompt5: prompts[4], Prompt6: prompts[5],
 		}
-		cc.UserId = campaign.UserId
 		cc.CampaignId = &campaign.Id
 		cc.Width, cc.Height = imgW, imgH
 		tx := db.BeginTx()
@@ -328,7 +326,6 @@ func createTextCaptcha(campaign *model.Campaign, prompts []string, count int) er
 			Prompt1: prompts[0], Prompt2: prompts[1], Prompt3: prompts[2], Prompt4: prompts[3],
 		}
 	}
-	c.UserId = campaign.UserId
 	c.CampaignId = &campaign.Id
 	c.Width, c.Height = imgW, imgH
 
@@ -395,7 +392,6 @@ func createRotateCaptcha(campaign *model.Campaign) error {
 	c := model.CaptchaImageRotate{
 		Tolerance: 15,
 	}
-	c.UserId = campaign.UserId
 	c.CampaignId = &campaign.Id
 
 	tx := db.BeginTx()

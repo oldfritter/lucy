@@ -18,7 +18,6 @@ const (
 
 type Captcha struct {
 	CommonModel
-	UserId       int    `form:"UserId" query:"UserId"`                           // 所属用户
 	UserApiKeyId *int   `gorm:"index"`                                           // 消费此验证码的 ApiKey ID（可为空）
 	CampaignId   *int   `gorm:"index"`                                           // 投放此验证码的 Campaign ID（可为空）
 	Status       int    `gorm:"size:8;default:1" query:"Status"`                 // 状态

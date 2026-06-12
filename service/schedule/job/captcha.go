@@ -12,14 +12,19 @@ import (
 
 func init() {
 	Register(Job{
-		Name: "batch-update-captcha-status",
+		Name: "batch-confirm-captcha-success",
 		Spec: "@daily",
-		Func: batchUpdateCaptchaStatus,
+		Func: batchConfirmCaptchaSuccess,
 	})
 	Register(Job{
 		Name: "sync-captcha-cache",
 		Spec: "0 0 1 * * *",
 		Func: syncCaptchaCache,
+	})
+	Register(Job{
+		Name: "recycle-failed-captcha",
+		Spec: "@every 10m",
+		Func: recycleFailedCaptcha,
 	})
 }
 
@@ -34,12 +39,12 @@ var captchaTypeTable = []struct {
 	{"image:rotate", &model.CaptchaImageRotate{}},
 }
 
-// batchUpdateCaptchaStatus 凌晨按类型分别取出并批量写入验证状态
-func batchUpdateCaptchaStatus() {
+// batchConfirmCaptchaSuccess 凌晨按类型分别取出已验证通过的验证码，批量写入成功状态
+func batchConfirmCaptchaSuccess() {
 	for _, ct := range captchaTypeTable {
-		success, failed, err := pool.DrainVerifiedPool(ct.poolType)
+		success, _, err := pool.DrainVerifiedPool(ct.poolType)
 		if err != nil {
-			log.Printf("[batch-update-captcha-status] drain %s pool failed: %v", ct.poolType, err)
+			log.Printf("[batch-confirm-captcha-success] drain %s pool failed: %v", ct.poolType, err)
 			continue
 		}
 
@@ -48,26 +53,55 @@ func batchUpdateCaptchaStatus() {
 				Where("uid IN ?", success).
 				Update("status", dom.CaptchaStatusSuccess)
 			if result.Error != nil {
-				log.Printf("[batch-update-captcha-status] %s success update failed: %v", ct.poolType, result.Error)
+				log.Printf("[batch-confirm-captcha-success] %s update failed: %v", ct.poolType, result.Error)
 			} else {
-				log.Printf("[batch-update-captcha-status] %s success=%d", ct.poolType, result.RowsAffected)
-			}
-		}
-
-		if len(failed) > 0 {
-			result := db.MysqlDB.Model(ct.model).
-				Where("uid IN ?", failed).
-				Update("status", dom.CaptchaStatusFailed)
-			if result.Error != nil {
-				log.Printf("[batch-update-captcha-status] %s failed update failed: %v", ct.poolType, result.Error)
-			} else {
-				log.Printf("[batch-update-captcha-status] %s failed=%d", ct.poolType, result.RowsAffected)
+				log.Printf("[batch-confirm-captcha-success] %s count=%d", ct.poolType, result.RowsAffected)
 			}
 		}
 	}
 }
 
-// syncCaptchaCache 在 batchUpdateCaptchaStatus 执行后 1 小时（凌晨 1 点）将数据库中未被使用（status=1）的验证码重新写入 Redis 缓存，
+const maxRecallAttempts = 10
+
+// recycleFailedCaptcha 每10分钟将验证失败的验证码重新送入待用池，
+// 单个验证码回收次数超过 maxRecallAttempts（10次）则丢弃，防止积压。
+func recycleFailedCaptcha() {
+	for _, ct := range captchaTypeTable {
+		uids, err := pool.DrainFailedPool(ct.poolType)
+		if err != nil {
+			log.Printf("[recycle-failed-captcha] drain %s failed pool error: %v", ct.poolType, err)
+			continue
+		}
+		if len(uids) == 0 {
+			continue
+		}
+
+		recalled := 0
+		discarded := 0
+		for _, uid := range uids {
+			count, err := pool.IncrRecallCount(uid)
+			if err != nil {
+				log.Printf("[recycle-failed-captcha] incr recall count for %s failed: %v", uid, err)
+				continue
+			}
+			if count <= maxRecallAttempts {
+				if err := pool.AddToPool(ct.poolType, uid); err != nil {
+					log.Printf("[recycle-failed-captcha] add %s to pool %s failed: %v", uid, ct.poolType, err)
+					continue
+				}
+				recalled++
+			} else {
+				discarded++
+				log.Printf("[recycle-failed-captcha] %s recall count=%d exceeds max, discarded", uid, count)
+			}
+		}
+		if recalled > 0 || discarded > 0 {
+			log.Printf("[recycle-failed-captcha] %s recalled=%d discarded=%d", ct.poolType, recalled, discarded)
+		}
+	}
+}
+
+// syncCaptchaCache 在 batchConfirmCaptchaSuccess 执行后 1 小时（凌晨 1 点）将数据库中未被使用（status=1）的验证码重新写入 Redis 缓存，
 // 防止因缓存过期或重启导致池中验证码无法被 FetchCaptcha 获取。
 func syncCaptchaCache() {
 	// 四张验证码表，各自查询 status=1 的记录，跳过已验证的 uid
