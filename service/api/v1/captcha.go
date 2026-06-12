@@ -64,9 +64,12 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:4", uid, false)
+			pool.RemoveFromPendingPool(uid)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:4", uid, true)
+		pool.ResetRecallCount(uid)
+		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -78,9 +81,12 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:5", uid, false)
+			pool.RemoveFromPendingPool(uid)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:5", uid, true)
+		pool.ResetRecallCount(uid)
+		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -92,9 +98,12 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:6", uid, false)
+			pool.RemoveFromPendingPool(uid)
 			return util.BuildError("1300")
 		}
 		pool.AddToVerifiedPool("text:6", uid, true)
+		pool.ResetRecallCount(uid)
+		pool.RemoveFromPendingPool(uid)
 		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -110,9 +119,12 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 	}
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		pool.AddToVerifiedPool("image:rotate", uid, false)
+		pool.RemoveFromPendingPool(uid)
 		return util.BuildError("1300")
 	}
 	pool.AddToVerifiedPool("image:rotate", uid, true)
+	pool.ResetRecallCount(uid)
+	pool.RemoveFromPendingPool(uid)
 	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
 	resp := util.SuccessResponse()
 	resp.Body = map[string]string{"valid_code": captcha.ValidCode}
@@ -197,6 +209,9 @@ func FetchCaptcha(c echo.Context) (err error) {
 	if campaignID, ok := rawData["campaign_id"].(float64); ok {
 		pool.RemoveFromCampaignPool(int(campaignID), uid)
 	}
+
+	// 将 uid 记录到待验证池，超时未验证将由定时任务回收
+	pool.AddToPendingPool(apiKey.CaptchaType, uid)
 
 	// 将消费此验证码的 ApiKey ID 写入 DB
 	apiKeyId := apiKey.Id

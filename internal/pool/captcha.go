@@ -2,6 +2,7 @@ package pool
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 
@@ -184,6 +185,57 @@ func ResetRecallCount(uid string) error {
 	defer conn.Close()
 	_, err := conn.Do("DEL", recallCountKey(uid))
 	return err
+}
+
+// ── 捞取后未验证回收 ──
+
+const (
+	maxRecall  = 3
+	pendingTTL = 10 * 60 // 10 分钟
+)
+
+func pendingKey(captchaType string) string {
+	return base.RedisNamespace + ":captcha:pending:" + captchaType
+}
+
+// AddToPendingPool 将 uid 记录为已捞取、等待验证状态
+func AddToPendingPool(captchaType, uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	_, err := conn.Do("ZADD", pendingKey(captchaType), time.Now().Unix()+pendingTTL, uid)
+	return err
+}
+
+// RemoveFromPendingPool 从所有类型的 pending 池中移除 uid
+func RemoveFromPendingPool(uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	types := []string{"text:4", "text:5", "text:6", "image:rotate"}
+	for _, t := range types {
+		conn.Do("ZREM", pendingKey(t), uid)
+	}
+	return nil
+}
+
+// ExpiredFromPendingPool 返回某类型中已超时的 uid 并移除
+func ExpiredFromPendingPool(captchaType string) ([]string, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	now := time.Now().Unix()
+	key := pendingKey(captchaType)
+	uids, err := redis.Strings(conn.Do("ZRANGEBYSCORE", key, "-inf", now))
+	if err != nil {
+		return nil, err
+	}
+	if len(uids) > 0 {
+		args := make([]any, 0, len(uids)+1)
+		args = append(args, key)
+		for _, u := range uids {
+			args = append(args, u)
+		}
+		conn.Do("ZREM", args...)
+	}
+	return uids, nil
 }
 
 // IsInVerifiedPool 检查 uid 是否已经被验证过（存在于任一类型的 success 或 failed 池中）

@@ -41,7 +41,7 @@ func main() {
 			e.Use(nrecho.Middleware(app))
 		}
 	}
-	e.Use(middleware.Secure(), middleware.Recover(), middleware.Logger())
+	e.Use(middleware.Secure(), middleware.Recover(), middleware.Logger(), middleware.CORS())
 	e.Validator = &helper.CustomValidator{Validator: validator.New()}
 	e.HTTPErrorHandler = helper.CustomHTTPErrorHandler
 	e.Logger.SetOutput(util.GetLogFile())

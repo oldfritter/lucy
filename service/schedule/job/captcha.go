@@ -26,6 +26,11 @@ func init() {
 		Spec: "@every 10m",
 		Func: recycleFailedCaptcha,
 	})
+	Register(Job{
+		Name: "recycle-pending-captcha",
+		Spec: "@every 5m",
+		Func: recyclePendingCaptcha,
+	})
 }
 
 // captchaTypeTable 验证码类型到 DB 模型的映射
@@ -61,7 +66,10 @@ func batchConfirmCaptchaSuccess() {
 	}
 }
 
-const maxRecallAttempts = 10
+const (
+	maxRecallAttempts        = 10
+	maxPendingRecallAttempts = 3
+)
 
 // recycleFailedCaptcha 每10分钟将验证失败的验证码重新送入待用池，
 // 单个验证码回收次数超过 maxRecallAttempts（10次）则丢弃，防止积压。
@@ -97,6 +105,60 @@ func recycleFailedCaptcha() {
 		}
 		if recalled > 0 || discarded > 0 {
 			log.Printf("[recycle-failed-captcha] %s recalled=%d discarded=%d", ct.poolType, recalled, discarded)
+		}
+	}
+}
+
+// recyclePendingCaptcha 每5分钟扫描待验证池中超时的验证码，
+//
+//	回收到待用池（上限 maxPendingRecallAttempts 次），超出则放入失败池。
+func recyclePendingCaptcha() {
+	for _, ct := range captchaTypeTable {
+		uids, err := pool.ExpiredFromPendingPool(ct.poolType)
+		if err != nil {
+			log.Printf("[recycle-pending-captcha] drain %s pending pool error: %v", ct.poolType, err)
+			continue
+		}
+		if len(uids) == 0 {
+			continue
+		}
+
+		recalled := 0
+		failed := 0
+		for _, uid := range uids {
+			// 如果已经被验证（在成功或失败池中），跳过
+			verified, err := pool.IsInVerifiedPool(uid)
+			if err != nil {
+				log.Printf("[recycle-pending-captcha] check verified for %s: %v", uid, err)
+				continue
+			}
+			if verified {
+				continue
+			}
+
+			count, err := pool.IncrRecallCount(uid)
+			if err != nil {
+				log.Printf("[recycle-pending-captcha] incr recall for %s: %v", uid, err)
+				continue
+			}
+
+			if count <= maxPendingRecallAttempts {
+				if err := pool.AddToPool(ct.poolType, uid); err != nil {
+					log.Printf("[recycle-pending-captcha] add %s to pool %s: %v", uid, ct.poolType, err)
+					continue
+				}
+				recalled++
+			} else {
+				// 超过 3 次，视为验证失败
+				if err := pool.AddToVerifiedPool(ct.poolType, uid, false); err != nil {
+					log.Printf("[recycle-pending-captcha] add %s to failed pool: %v", uid, err)
+					continue
+				}
+				failed++
+			}
+		}
+		if recalled > 0 || failed > 0 {
+			log.Printf("[recycle-pending-captcha] %s recalled=%d failed=%d", ct.poolType, recalled, failed)
 		}
 	}
 }
