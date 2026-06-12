@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 
@@ -149,6 +150,11 @@ func FetchCaptcha(c echo.Context) (err error) {
 		resp.Head["Code"] = "1010"
 		resp.Head["Msg"] = "超出每分钟最大验证次数"
 		return c.JSON(http.StatusTooManyRequests, resp)
+	}
+
+	// 记录本次请求到分钟级访问统计
+	if err := cache.RecordApiKeyRequest(apiKey.Id); err != nil {
+		log.Printf("[fetch-captcha] record api key %d request failed: %v", apiKey.Id, err)
 	}
 
 	// 从对应类型的池中捞取一个 uid

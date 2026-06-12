@@ -1,12 +1,16 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/oldfritter/lucy/base"
 	"github.com/oldfritter/lucy/dom"
+	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/model"
 	"github.com/oldfritter/lucy/util"
@@ -135,6 +139,60 @@ func UpdateMyApiKey(c echo.Context) (err error) {
 	response := util.SuccessResponse()
 	response.Body = uak
 	return c.JSON(http.StatusOK, response)
+}
+
+// ── API Key 分钟级访问统计 ──
+
+// GetMyApiKeyStats 当前用户查看自己 ApiKey 的分钟级调用统计
+//
+//	查询参数（可选）：
+//	  start — 起始时间，格式 "2006-01-02T15:04:05" 或 Unix 秒时间戳（默认 24 小时前）
+//	  end   — 截止时间，同上（默认当前时间）
+func GetMyApiKeyStats(c echo.Context) (err error) {
+	claims, _ := base.GetClaim(c)
+
+	// 验证 ApiKey 属于当前用户
+	var uak model.UserApiKey
+	if err = db.MysqlDB.Where("id = ? AND user_id = ?", c.Param("id"), claims.UserId).
+		First(&uak).Error; err != nil {
+		return util.BuildError("1003")
+	}
+
+	// 解析时间范围
+	now := time.Now()
+	endTs := now.Unix()
+	startTs := now.Add(-24 * time.Hour).Unix()
+
+	if s := c.QueryParam("start"); s != "" {
+		if t, err := parseTimeParam(s); err == nil {
+			startTs = t.Unix()
+		}
+	}
+	if e := c.QueryParam("end"); e != "" {
+		if t, err := parseTimeParam(e); err == nil {
+			endTs = t.Unix()
+		}
+	}
+
+	body, err := cache.GetApiKeyStats(uak.Id, startTs, endTs)
+	if err != nil {
+		return util.BuildError("1007", "获取统计数据失败")
+	}
+
+	resp := util.SuccessResponse()
+	resp.Body = body
+	return c.JSON(http.StatusOK, resp)
+}
+
+// parseTimeParam 尝试将字符串按多种格式解析为 time.Time
+func parseTimeParam(s string) (time.Time, error) {
+	if t, err := time.Parse("2006-01-02T15:04:05", s); err == nil {
+		return t, nil
+	}
+	if t, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return time.Unix(t, 0), nil
+	}
+	return time.Time{}, fmt.Errorf("无法解析时间: %s", s)
 }
 
 // DeleteMyApiKey 当前用户删除自己的 ApiKey
