@@ -35,31 +35,20 @@ func AddToVerifiedPool(captchaType, uid string, success bool) error {
 	return err
 }
 
-// DrainVerifiedPool 取出并清空某类型验证结果池，返回两组 UID
-func DrainVerifiedPool(captchaType string) (success []string, failed []string, err error) {
+// DrainVerifiedPool 取出并清空某类型已验证通过的 UID 列表（仅 success 池）
+func DrainVerifiedPool(captchaType string) ([]string, error) {
 	conn := kv.GetRedisConn("data")
 	defer conn.Close()
 
 	sk := verifiedSuccessKey(captchaType)
-	fk := verifiedFailedKey(captchaType)
-
-	success, err = redis.Strings(conn.Do("SMEMBERS", sk))
+	uids, err := redis.Strings(conn.Do("SMEMBERS", sk))
 	if err != nil && err != redis.ErrNil {
-		return nil, nil, err
+		return nil, err
 	}
-	if len(success) > 0 {
+	if len(uids) > 0 {
 		conn.Do("DEL", sk)
 	}
-
-	failed, err = redis.Strings(conn.Do("SMEMBERS", fk))
-	if err != nil && err != redis.ErrNil {
-		return nil, nil, err
-	}
-	if len(failed) > 0 {
-		conn.Do("DEL", fk)
-	}
-
-	return success, failed, nil
+	return uids, nil
 }
 
 func AddToPool(captchaType, uid string) error {

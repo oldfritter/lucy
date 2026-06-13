@@ -50,3 +50,33 @@ func DelCaptchaCache(captcha string) error {
 func BuildCacheKey(captcha string) string {
 	return base.RedisNamespace + ":" + "captcha:" + captcha
 }
+
+// ── Fetch 阶段 owner 暂存（uid → user_api_key_id，供 batch 任务批量回写 DB）──
+
+const fetchOwnerHashKey = base.RedisNamespace + ":captcha:fetch-owner"
+
+// SetFetchOwner 记录 uid 被哪个 ApiKey 消费，1 天自动过期
+func SetFetchOwner(uid string, apiKeyId int) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	conn.Send("MULTI")
+	conn.Send("HSET", fetchOwnerHashKey, uid, apiKeyId)
+	conn.Send("EXPIRE", fetchOwnerHashKey, 86400)
+	_, err := redis.Ints(conn.Do("EXEC"))
+	return err
+}
+
+// GetFetchOwner 查询 uid 对应的 ApiKey ID
+func GetFetchOwner(uid string) (int, error) {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	return redis.Int(conn.Do("HGET", fetchOwnerHashKey, uid))
+}
+
+// DelFetchOwner 删除 uid 的 owner 记录（batch 处理后调用）
+func DelFetchOwner(uid string) error {
+	conn := kv.GetRedisConn("data")
+	defer conn.Close()
+	_, err := conn.Do("HDEL", fetchOwnerHashKey, uid)
+	return err
+}

@@ -13,7 +13,7 @@ import (
 func init() {
 	Register(Job{
 		Name: "batch-confirm-captcha-success",
-		Spec: "@daily",
+		Spec: "@every 5m",
 		Func: batchConfirmCaptchaSuccess,
 	})
 	Register(Job{
@@ -44,23 +44,50 @@ var captchaTypeTable = []struct {
 	{"image:rotate", &model.CaptchaImageRotate{}},
 }
 
-// batchConfirmCaptchaSuccess 凌晨按类型分别取出已验证通过的验证码，批量写入成功状态
+// captchaTypeTableName 验证码类型到 DB 表名的映射（避免 GORM Model 通过 any 类型推导表名）
+var captchaTypeTableName = map[string]string{
+	"text:4":        "captcha_text_4",
+	"text:5":        "captcha_text_5",
+	"text:6":        "captcha_text_6",
+	"image:rotate":  "captcha_image_rotate",
+}
+
+// batchConfirmCaptchaSuccess 定期从 success 池取出已验证通过的 UID，批量写入 DB status=2
 func batchConfirmCaptchaSuccess() {
 	for _, ct := range captchaTypeTable {
-		success, _, err := pool.DrainVerifiedPool(ct.poolType)
+		success, err := pool.DrainVerifiedPool(ct.poolType)
 		if err != nil {
 			log.Printf("[batch-confirm-captcha-success] drain %s pool failed: %v", ct.poolType, err)
 			continue
 		}
 
 		if len(success) > 0 {
-			result := db.MysqlDB.Model(ct.model).
+			tableName, ok := captchaTypeTableName[ct.poolType]
+			if !ok {
+				log.Printf("[batch-confirm-captcha-success] unknown type: %s", ct.poolType)
+				continue
+			}
+			result := db.MysqlDB.Table(tableName).
 				Where("uid IN ?", success).
 				Update("status", dom.CaptchaStatusSuccess)
 			if result.Error != nil {
 				log.Printf("[batch-confirm-captcha-success] %s update failed: %v", ct.poolType, result.Error)
 			} else {
 				log.Printf("[batch-confirm-captcha-success] %s count=%d", ct.poolType, result.RowsAffected)
+			}
+
+			// 回写 fetch 阶段暂存的 user_api_key_id
+			for _, uid := range success {
+				apiKeyId, err := cache.GetFetchOwner(uid)
+				if err != nil || apiKeyId <= 0 {
+					continue
+				}
+				if err := db.MysqlDB.Table(tableName).
+					Where("uid = ?", uid).
+					Update("user_api_key_id", apiKeyId).Error; err != nil {
+					log.Printf("[batch-confirm-captcha-success] %s uid=%s update user_api_key_id failed: %v", ct.poolType, uid, err)
+				}
+				cache.DelFetchOwner(uid)
 			}
 		}
 	}

@@ -9,6 +9,9 @@
     "1005": Internal server error
     "1006": External service error
 
+    # Verification (1007-1009)
+    "1008": Captcha already consumed
+
     # User / Auth (11xx)
     "1100": Incorrect credentials
     "1101": Old password is incorrect

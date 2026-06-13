@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/internal/pool"
 	"github.com/oldfritter/lucy/lib/db"
@@ -62,12 +63,17 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
 			return util.BuildError("1301")
 		}
+		if ok, _ := pool.IsInVerifiedPool(uid); ok {
+			return util.BuildError("1008")
+		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:4", uid, false)
 			pool.RemoveFromPendingPool(uid)
 			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
+		captcha.Status = dom.CaptchaStatusSuccess
+		cache.SetCaptchaCache(&captcha)
 		pool.AddToVerifiedPool("text:4", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
@@ -81,12 +87,17 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
 			return util.BuildError("1301")
 		}
+		if ok, _ := pool.IsInVerifiedPool(uid); ok {
+			return util.BuildError("1008")
+		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:5", uid, false)
 			pool.RemoveFromPendingPool(uid)
 			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
+		captcha.Status = dom.CaptchaStatusSuccess
+		cache.SetCaptchaCache(&captcha)
 		pool.AddToVerifiedPool("text:5", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
@@ -100,12 +111,17 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
 			return util.BuildError("1301")
 		}
+		if ok, _ := pool.IsInVerifiedPool(uid); ok {
+			return util.BuildError("1008")
+		}
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:6", uid, false)
 			pool.RemoveFromPendingPool(uid)
 			recordVerifyResult(captcha.UserApiKeyId, false)
 			return util.BuildError("1300")
 		}
+		captcha.Status = dom.CaptchaStatusSuccess
+		cache.SetCaptchaCache(&captcha)
 		pool.AddToVerifiedPool("text:6", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
@@ -123,12 +139,17 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 	if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
 		return util.BuildError("1301")
 	}
+	if ok, _ := pool.IsInVerifiedPool(uid); ok {
+		return util.BuildError("1008")
+	}
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		pool.AddToVerifiedPool("image:rotate", uid, false)
 		pool.RemoveFromPendingPool(uid)
 		recordVerifyResult(captcha.UserApiKeyId, false)
 		return util.BuildError("1300")
 	}
+	captcha.Status = dom.CaptchaStatusSuccess
+	cache.SetCaptchaCache(&captcha)
 	pool.AddToVerifiedPool("image:rotate", uid, true)
 	pool.ResetRecallCount(uid)
 	pool.RemoveFromPendingPool(uid)
@@ -229,18 +250,9 @@ func FetchCaptcha(c echo.Context) (err error) {
 	// 将 uid 记录到待验证池，超时未验证将由定时任务回收
 	pool.AddToPendingPool(apiKey.CaptchaType, uid)
 
-	// 将消费此验证码的 ApiKey ID 写入 DB
-	apiKeyId := apiKey.Id
-	userApiKeyId := &apiKeyId
-	switch apiKey.CaptchaType {
-	case "text:4":
-		db.MysqlDB.Model(&model.CaptchaText4{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
-	case "text:5":
-		db.MysqlDB.Model(&model.CaptchaText5{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
-	case "text:6":
-		db.MysqlDB.Model(&model.CaptchaText6{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
-	case "image:rotate":
-		db.MysqlDB.Model(&model.CaptchaImageRotate{}).Where("uid = ?", uid).Update("user_api_key_id", userApiKeyId)
+	// 将消费此验证码的 ApiKey ID 暂存 Redis，由 batchConfirmCaptchaSuccess 批量回写 DB
+	if err := cache.SetFetchOwner(uid, apiKey.Id); err != nil {
+		log.Printf("[fetch-captcha] set fetch owner for %s failed: %v", uid, err)
 	}
 
 	// 生成带签名的临时下载链接

@@ -63,6 +63,7 @@ func (captcha *CaptchaText6) Json() string {
 		"campaign_id": captcha.CampaignId,
 		"width": captcha.Width,
 		"height": captcha.Height,
+		"status":     captcha.Status,
 
 		"p1": captcha.Prompt1,
 		"p2": captcha.Prompt2,
