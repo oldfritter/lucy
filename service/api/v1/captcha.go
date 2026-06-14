@@ -12,7 +12,6 @@ import (
 	"github.com/oldfritter/lucy/dom"
 	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/internal/pool"
-	"github.com/oldfritter/lucy/lib/db"
 	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/model"
 	"github.com/oldfritter/lucy/util"
@@ -59,9 +58,9 @@ func VerifyCaptcha(c echo.Context) (err error) {
 func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 	switch len(req.Points) {
 	case 4:
-		var captcha model.CaptchaText4
-		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1301")
+		captcha, err := captchaText4FromCache(uid)
+		if err != nil {
+			return err
 		}
 		if ok, _ := pool.IsInVerifiedPool(uid); ok {
 			return util.BuildError("1008")
@@ -69,23 +68,23 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:4", uid, false)
 			pool.RemoveFromPendingPool(uid)
-			recordVerifyResult(captcha.UserApiKeyId, false)
+			recordVerifyResult(fetchOwnerPtr(uid), false)
 			return util.BuildError("1300")
 		}
 		captcha.Status = dom.CaptchaStatusSuccess
-		cache.SetCaptchaCache(&captcha)
+		cache.SetCaptchaCache(captcha)
 		pool.AddToVerifiedPool("text:4", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
-		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
-		recordVerifyResult(captcha.UserApiKeyId, true)
+		cleanupCaptcha(captcha.GetCaptcha())
+		recordVerifyResult(fetchOwnerPtr(uid), true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
 	case 5:
-		var captcha model.CaptchaText5
-		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1301")
+		captcha, err := captchaText5FromCache(uid)
+		if err != nil {
+			return err
 		}
 		if ok, _ := pool.IsInVerifiedPool(uid); ok {
 			return util.BuildError("1008")
@@ -93,23 +92,23 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:5", uid, false)
 			pool.RemoveFromPendingPool(uid)
-			recordVerifyResult(captcha.UserApiKeyId, false)
+			recordVerifyResult(fetchOwnerPtr(uid), false)
 			return util.BuildError("1300")
 		}
 		captcha.Status = dom.CaptchaStatusSuccess
-		cache.SetCaptchaCache(&captcha)
+		cache.SetCaptchaCache(captcha)
 		pool.AddToVerifiedPool("text:5", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
-		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
-		recordVerifyResult(captcha.UserApiKeyId, true)
+		cleanupCaptcha(captcha.GetCaptcha())
+		recordVerifyResult(fetchOwnerPtr(uid), true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
 	case 6:
-		var captcha model.CaptchaText6
-		if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-			return util.BuildError("1301")
+		captcha, err := captchaText6FromCache(uid)
+		if err != nil {
+			return err
 		}
 		if ok, _ := pool.IsInVerifiedPool(uid); ok {
 			return util.BuildError("1008")
@@ -117,16 +116,16 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 		if !captcha.Verify(map[string]any{"points": pointsToInts(req.Points)}) {
 			pool.AddToVerifiedPool("text:6", uid, false)
 			pool.RemoveFromPendingPool(uid)
-			recordVerifyResult(captcha.UserApiKeyId, false)
+			recordVerifyResult(fetchOwnerPtr(uid), false)
 			return util.BuildError("1300")
 		}
 		captcha.Status = dom.CaptchaStatusSuccess
-		cache.SetCaptchaCache(&captcha)
+		cache.SetCaptchaCache(captcha)
 		pool.AddToVerifiedPool("text:6", uid, true)
 		pool.ResetRecallCount(uid)
 		pool.RemoveFromPendingPool(uid)
-		cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
-		recordVerifyResult(captcha.UserApiKeyId, true)
+		cleanupCaptcha(captcha.GetCaptcha())
+		recordVerifyResult(fetchOwnerPtr(uid), true)
 		resp := util.SuccessResponse()
 		resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 		return c.JSON(http.StatusOK, resp)
@@ -135,9 +134,9 @@ func verifyTextByUid(c echo.Context, uid string, req verifyRequest) error {
 }
 
 func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
-	var captcha model.CaptchaImageRotate
-	if err := db.MysqlDB.Where("uid = ?", uid).First(&captcha).Error; err != nil {
-		return util.BuildError("1301")
+	captcha, err := captchaRotateFromCache(uid)
+	if err != nil {
+		return err
 	}
 	if ok, _ := pool.IsInVerifiedPool(uid); ok {
 		return util.BuildError("1008")
@@ -145,16 +144,16 @@ func verifyRotateByUid(c echo.Context, uid string, req verifyRequest) error {
 	if !captcha.Verify(map[string]any{"angle": *req.Angle}) {
 		pool.AddToVerifiedPool("image:rotate", uid, false)
 		pool.RemoveFromPendingPool(uid)
-		recordVerifyResult(captcha.UserApiKeyId, false)
+		recordVerifyResult(fetchOwnerPtr(uid), false)
 		return util.BuildError("1300")
 	}
 	captcha.Status = dom.CaptchaStatusSuccess
-	cache.SetCaptchaCache(&captcha)
+	cache.SetCaptchaCache(captcha)
 	pool.AddToVerifiedPool("image:rotate", uid, true)
 	pool.ResetRecallCount(uid)
 	pool.RemoveFromPendingPool(uid)
-	cleanupCaptcha(captcha.Key, captcha.GetCaptcha())
-	recordVerifyResult(captcha.UserApiKeyId, true)
+	cleanupCaptcha(captcha.GetCaptcha())
+	recordVerifyResult(fetchOwnerPtr(uid), true)
 	resp := util.SuccessResponse()
 	resp.Body = map[string]string{"valid_code": captcha.ValidCode}
 	return c.JSON(http.StatusOK, resp)
@@ -168,6 +167,161 @@ func recordVerifyResult(captchaUserApiKeyId *int, isSuccess bool) {
 	}
 }
 
+// fetchOwnerPtr 从 Redis 获取 uid 对应的 ApiKey ID（*int，用于 recordVerifyResult）
+func fetchOwnerPtr(uid string) *int {
+	if id, err := cache.GetFetchOwner(uid); err == nil && id > 0 {
+		return &id
+	}
+	return nil
+}
+
+// ── 从 Redis 缓存加载验证码结构体（替代 DB 查询）──
+
+func getStr(data map[string]any, key string) string {
+	if v, ok := data[key]; ok && v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func getInt(data map[string]any, key string) int {
+	if v, ok := data[key]; ok && v != nil {
+		if f, ok := v.(float64); ok {
+			return int(f)
+		}
+	}
+	return 0
+}
+
+func captchaText4FromCache(uid string) (*model.CaptchaText4, error) {
+	cached, err := cache.GetCaptchaCache("text:4:" + uid)
+	if err != nil || cached == "" {
+		return nil, util.BuildError("1301")
+	}
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(cached), &raw); err != nil {
+		return nil, util.BuildError("1301")
+	}
+	c := &model.CaptchaText4{}
+	c.Uid = uid
+	c.ValidCode = getStr(raw, "valid_code")
+	c.Key = getStr(raw, "key")
+	c.Width = getInt(raw, "width")
+	c.Height = getInt(raw, "height")
+	c.Status = getInt(raw, "status")
+	c.Prompt1 = getStr(raw, "p1")
+	c.Prompt2 = getStr(raw, "p2")
+	c.Prompt3 = getStr(raw, "p3")
+	c.Prompt4 = getStr(raw, "p4")
+	c.Verify1X = getInt(raw, "v1x")
+	c.Verify1Y = getInt(raw, "v1y")
+	c.Verify2X = getInt(raw, "v2x")
+	c.Verify2Y = getInt(raw, "v2y")
+	c.Verify3X = getInt(raw, "v3x")
+	c.Verify3Y = getInt(raw, "v3y")
+	c.Verify4X = getInt(raw, "v4x")
+	c.Verify4Y = getInt(raw, "v4y")
+	return c, nil
+}
+
+func captchaText5FromCache(uid string) (*model.CaptchaText5, error) {
+	cached, err := cache.GetCaptchaCache("text:5:" + uid)
+	if err != nil || cached == "" {
+		return nil, util.BuildError("1301")
+	}
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(cached), &raw); err != nil {
+		return nil, util.BuildError("1301")
+	}
+	c := &model.CaptchaText5{}
+	c.Uid = uid
+	c.ValidCode = getStr(raw, "valid_code")
+	c.Key = getStr(raw, "key")
+	c.Width = getInt(raw, "width")
+	c.Height = getInt(raw, "height")
+	c.Status = getInt(raw, "status")
+	c.Prompt1 = getStr(raw, "p1")
+	c.Prompt2 = getStr(raw, "p2")
+	c.Prompt3 = getStr(raw, "p3")
+	c.Prompt4 = getStr(raw, "p4")
+	c.Prompt5 = getStr(raw, "p5")
+	c.Verify1X = getInt(raw, "v1x")
+	c.Verify1Y = getInt(raw, "v1y")
+	c.Verify2X = getInt(raw, "v2x")
+	c.Verify2Y = getInt(raw, "v2y")
+	c.Verify3X = getInt(raw, "v3x")
+	c.Verify3Y = getInt(raw, "v3y")
+	c.Verify4X = getInt(raw, "v4x")
+	c.Verify4Y = getInt(raw, "v4y")
+	c.Verify5X = getInt(raw, "v5x")
+	c.Verify5Y = getInt(raw, "v5y")
+	return c, nil
+}
+
+func captchaText6FromCache(uid string) (*model.CaptchaText6, error) {
+	cached, err := cache.GetCaptchaCache("text:6:" + uid)
+	if err != nil || cached == "" {
+		return nil, util.BuildError("1301")
+	}
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(cached), &raw); err != nil {
+		return nil, util.BuildError("1301")
+	}
+	c := &model.CaptchaText6{}
+	c.Uid = uid
+	c.ValidCode = getStr(raw, "valid_code")
+	c.Key = getStr(raw, "key")
+	c.Width = getInt(raw, "width")
+	c.Height = getInt(raw, "height")
+	c.Status = getInt(raw, "status")
+	c.Prompt1 = getStr(raw, "p1")
+	c.Prompt2 = getStr(raw, "p2")
+	c.Prompt3 = getStr(raw, "p3")
+	c.Prompt4 = getStr(raw, "p4")
+	c.Prompt5 = getStr(raw, "p5")
+	c.Prompt6 = getStr(raw, "p6")
+	c.Verify1X = getInt(raw, "v1x")
+	c.Verify1Y = getInt(raw, "v1y")
+	c.Verify2X = getInt(raw, "v2x")
+	c.Verify2Y = getInt(raw, "v2y")
+	c.Verify3X = getInt(raw, "v3x")
+	c.Verify3Y = getInt(raw, "v3y")
+	c.Verify4X = getInt(raw, "v4x")
+	c.Verify4Y = getInt(raw, "v4y")
+	c.Verify5X = getInt(raw, "v5x")
+	c.Verify5Y = getInt(raw, "v5y")
+	c.Verify6X = getInt(raw, "v6x")
+	c.Verify6Y = getInt(raw, "v6y")
+	return c, nil
+}
+
+func captchaRotateFromCache(uid string) (*model.CaptchaImageRotate, error) {
+	cached, err := cache.GetCaptchaCache("image:rotate:" + uid)
+	if err != nil || cached == "" {
+		return nil, util.BuildError("1301")
+	}
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(cached), &raw); err != nil {
+		return nil, util.BuildError("1301")
+	}
+	c := &model.CaptchaImageRotate{}
+	c.Uid = uid
+	c.ValidCode = getStr(raw, "valid_code")
+	c.Key = getStr(raw, "key")
+	c.Width = getInt(raw, "width")
+	c.Height = getInt(raw, "height")
+	c.Status = getInt(raw, "status")
+	c.Angle = getInt(raw, "angle")
+	tolerance := getInt(raw, "tolerance")
+	if tolerance <= 0 {
+		tolerance = 15 // 兼容旧缓存（缺 tolerance 字段）及 GORM 默认值
+	}
+	c.Tolerance = tolerance
+	return c, nil
+}
+
 func pointsToInts(input []verifyPoint) [][]int {
 	points := make([][]int, len(input))
 	for i, p := range input {
@@ -176,8 +330,7 @@ func pointsToInts(input []verifyPoint) [][]int {
 	return points
 }
 
-func cleanupCaptcha(ossKey, captchaId string) {
-	_ = oss.DeleteObject(ossKey)
+func cleanupCaptcha(captchaId string) {
 	_ = cache.DelCaptchaCache(captchaId)
 }
 

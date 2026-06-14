@@ -7,6 +7,7 @@ import (
 	"github.com/oldfritter/lucy/internal/cache"
 	"github.com/oldfritter/lucy/internal/pool"
 	"github.com/oldfritter/lucy/lib/db"
+	"github.com/oldfritter/lucy/lib/storage/oss"
 	"github.com/oldfritter/lucy/model"
 )
 
@@ -89,6 +90,23 @@ func batchConfirmCaptchaSuccess() {
 				}
 				cache.DelFetchOwner(uid)
 			}
+
+			// 异步清理 OSS 文件（热路径中已不再实时删除）
+			go func(uids []string, tbl string) {
+				var keys []string
+				if err := db.MysqlDB.Table(tbl).Where("uid IN ?", uids).Pluck("key", &keys).Error; err != nil {
+					log.Printf("[batch-confirm-captcha-success] %s query oss keys failed: %v", tbl, err)
+					return
+				}
+				for _, k := range keys {
+					if k == "" {
+						continue
+					}
+					if err := oss.DeleteObject(k); err != nil {
+						log.Printf("[batch-confirm-captcha-success] %s oss delete %s failed: %v", tbl, k, err)
+					}
+				}
+			}(success, tableName)
 		}
 	}
 }
@@ -307,3 +325,5 @@ func syncCaptchaCache() {
 		}
 	}
 }
+
+

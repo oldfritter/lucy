@@ -52,6 +52,7 @@ func (captcha *CaptchaImageRotate) Json() string {
 		"height":      captcha.Height,
 		"status":      captcha.Status,
 		"angle":       captcha.Angle,
+		"tolerance":   captcha.Tolerance,
 	})
 	return string(b)
 }
