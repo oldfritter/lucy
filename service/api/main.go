@@ -41,7 +41,16 @@ func main() {
 			e.Use(nrecho.Middleware(app))
 		}
 	}
-	e.Use(middleware.Secure(), middleware.Recover(), middleware.Logger(), middleware.CORS())
+	e.Use(
+		middleware.CORSWithConfig(middleware.CORSConfig{
+			AllowOrigins: []string{"*"},
+			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+			AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+		}),
+		middleware.Secure(),
+		middleware.Recover(),
+		middleware.Logger(),
+	)
 	e.Validator = &helper.CustomValidator{Validator: validator.New()}
 	e.HTTPErrorHandler = helper.CustomHTTPErrorHandler
 	e.Logger.SetOutput(util.GetLogFile())
